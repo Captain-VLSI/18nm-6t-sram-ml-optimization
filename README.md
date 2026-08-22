@@ -95,6 +95,33 @@ All 1,200 SPICE netlist simulations were characterized under the following expli
 
 ---
 
+## 🏛️ Cadence Virtuoso SPICE Testbenches & Simulation Waveforms
+
+### 1. Hold Static Noise Margin (HSNM) Characterization
+- **Simulation Type:** DC Voltage Sweep (0V to VDD, 1 mV step) with `WL = 0V`.
+- **Purpose:** Characterizes cross-coupled inverter voltage transfer curves (VTCs) to calculate hold-mode static noise immunity.
+
+| HSNM Testbench Schematic (`cds_ff_mpt`) | Cadence ADE DC Butterfly Waveform |
+| :---: | :---: |
+| ![HSNM Testbench Schematic](02_spice_characterization/hsnm_testbench_schematic.png) | ![HSNM Waveform](02_spice_characterization/hsnm_cadence_waveform_graph.png) |
+
+### 2. Transient Write & Hold Multi-Cycle Characterization
+- **Simulation Type:** Transient Dynamic Response (0 to 100 ns, maxstep = 1 ps).
+- **Purpose:** Measures 50%-50% write switching delay ($T_{write}$), dynamic write energy, and standby data retention.
+
+| Write & Hold Testbench Schematic (`cds_ff_mpt`) | Cadence ADE Transient Multi-Cycle Response |
+| :---: | :---: |
+| ![Write Hold Testbench](02_spice_characterization/write_hold_testbench_schematic.png) | ![Write Hold Waveform](02_spice_characterization/write_hold_cadence_waveform_graph.png) |
+
+### 3. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
+- 📄 [`generate_snm_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_snm_dataset.py): Automates DC butterfly sweeps and calculates Hold, Read, and Write SNMs.
+- 📄 [`generate_standalone_sram_hold_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_hold_dataset.py): Automates standby leakage current ($I_{leak}$) and static power ($P_{leak}$) characterization.
+- 📄 [`generate_standalone_sram_read_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_read_dataset.py): Automates dynamic Read-0/Read-1 sensing and disturb bump measurements.
+- 📄 [`generate_standalone_sram_write_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_write_dataset.py): Automates transient Write-0/Write-1 switching delays and dynamic write energies.
+
+
+---
+
 ## 🦋 Static Noise Margin (SNM) Butterfly Characterization
 
 | Seevinck Rotated Butterfly Curves (Inscribed Squares) | Cadence Virtuoso ADE DC Transfer Waves |
