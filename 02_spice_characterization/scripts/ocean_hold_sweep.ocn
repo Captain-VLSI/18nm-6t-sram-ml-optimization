@@ -1,0 +1,195 @@
+; ================================================================
+;  6T SRAM - HOLD (RETENTION) TRANSIENT CHARACTERIZATION
+;  Sweeps: nfin_pu, nfin_pd, nfin_acc, VDD, Temperature
+;  Output: sram_hold_dataset.csv
+; ================================================================
+;
+;  TESTBENCH REQUIREMENTS:
+;    - WL: Held at 0V (access transistors OFF)
+;    - BL:  Held at VDD (or floating, does not matter)
+;    - BLB: Held at VDD (or floating, does not matter)
+;    - Initial conditions: Q = VDD (storing '1'), QB = 0
+;    - Cell must retain data through leakage alone
+;
+; ================================================================
+
+; ============================================================
+; CONFIGURATION - Modify these to match your testbench
+; ============================================================
+wl_net   = "/wl"        ; Wordline net
+bl_net   = "/bl"        ; Bitline net
+blb_net  = "/blb"       ; Bitline-bar net
+q_net    = "/q"         ; Storage node Q
+qb_net   = "/qb"        ; Storage node QB
+vdd_src  = "/V0"        ; VDD voltage source instance name
+
+; Testbench netlist path
+tb_path  = "/home/vlsi-lab/simulation/6tsram_hold_tb/spectre/schematic/netlist/netlist"
+
+; Model file path
+model_path = "/home/install/FOUNDRY/cds_ff_mpt_v_0.5/cds_ff_mpt/../models/spectre/cds_ff_mpt.scs"
+
+; Simulation time (longer for leakage measurement accuracy)
+sim_stop = "100n"
+
+; Output file
+csv_file = "./sram_hold_dataset.csv"
+; ============================================================
+
+printf("\n========================================================\n")
+printf("  6T SRAM HOLD/RETENTION SWEEP - Starting...\n")
+printf("========================================================\n\n")
+
+; --- Netlist Backup/Restore ---
+nf = tb_path
+nf_bak = strcat(nf ".bak")
+sh(sprintf(nil "if [ ! -f %s ]; then cp %s %s; echo 'HOLD: Backup created'; else cp %s %s; echo 'HOLD: Restored from backup'; fi" nf_bak nf nf_bak nf_bak nf))
+
+; --- Parameterize Netlist ---
+sh(sprintf(nil "sed -i 's/\\(NM0.*nfin=\\)[0-9][0-9]*/\\1nfin_pd/' %s" nf))
+sh(sprintf(nil "sed -i 's/\\(NM1.*nfin=\\)[0-9][0-9]*/\\1nfin_pd/' %s" nf))
+sh(sprintf(nil "sed -i 's/\\(NM2.*nfin=\\)[0-9][0-9]*/\\1nfin_acc/' %s" nf))
+sh(sprintf(nil "sed -i 's/\\(NM3.*nfin=\\)[0-9][0-9]*/\\1nfin_acc/' %s" nf))
+sh(sprintf(nil "sed -i 's/\\(PM0.*nfin=\\)[0-9][0-9]*/\\1nfin_pu/' %s" nf))
+sh(sprintf(nil "sed -i 's/\\(PM1.*nfin=\\)[0-9][0-9]*/\\1nfin_pu/' %s" nf))
+sh(sprintf(nil "sed -i '/vsource/s/dc=[0-9.]*[^ ]*/dc=vdd_val/' %s" nf))
+
+printf("Netlist parameterized.\n")
+
+; --- Simulator Setup ---
+simulator('spectre)
+design(nf)
+resultsDir(strcat(nf "/../.."))
+modelFile(list(list(model_path "tt")))
+analysis('tran ?stop sim_stop ?errpreset "moderate")
+envOption('analysisOrder list("tran"))
+
+; --- Sweep Ranges ---
+puL   = '(1 2 3 4 5)
+pdL   = '(1 2 3 4 5 6)
+accL  = '(1 2 3 4 5)
+vddL  = '(0.6 0.7 0.8 0.9)
+tempL = '(27)
+
+; --- CSV Header ---
+ofile = outfile(csv_file "w")
+fprintf(ofile "nfin_pu,nfin_pd,nfin_acc,vdd,temp,")
+fprintf(ofile "leakage_current_na,leakage_power_nw,")
+fprintf(ofile "q_droop_mv,qb_droop_mv,")
+fprintf(ofile "final_q_v,final_qb_v,")
+fprintf(ofile "q_noise_margin_mv,hold_success\n")
+
+; --- Count total runs ---
+total = length(puL) * length(pdL) * length(accL) * length(vddL) * length(tempL)
+cnt = 0
+
+; ============================================================
+;  MAIN SWEEP LOOP
+; ============================================================
+foreach(pu puL
+  foreach(pd pdL
+    foreach(acc accL
+      foreach(vdd vddL
+        foreach(tmp tempL
+
+          cnt = cnt + 1
+          printf("=== HOLD Run %d/%d: PU=%d PD=%d ACC=%d VDD=%.2f T=%d ===\n" cnt total pu pd acc vdd tmp)
+
+          desVar("nfin_pu"  pu)
+          desVar("nfin_pd"  pd)
+          desVar("nfin_acc" acc)
+          desVar("vdd_val"  vdd)
+          temp(tmp)
+
+          ; Initialize all outputs to failure
+          ilk = -1.0  plk = -1.0
+          q_droop = -1.0  qb_droop = -1.0
+          fin_q = -1.0  fin_qb = -1.0
+          q_nm = -1.0  h_ok = 0
+
+          sok = errset(run())
+          if(sok then
+            rok = errset(selectResult('tran))
+            if(rok then
+
+              ; Measurement window: 10ns to end (skip initial transient)
+              t_start = 10e-9
+              t_end   = 100e-9
+
+              ; ---- Leakage Current (average over hold period) ----
+              errset(
+                isup   = abs(IT(vdd_src))
+                isup_c = clip(isup t_start t_end)
+                ilk    = average(isup_c) * 1e9
+              )
+
+              ; ---- Leakage Power ----
+              errset(
+                plk = ilk * vdd
+              )
+
+              ; ---- Q Droop (Q starts at VDD, should stay there) ----
+              errset(
+                q_init = value(VT(q_net) t_start)
+                q_end  = value(VT(q_net) t_end)
+                q_droop = (q_init - q_end) * 1000.0
+              )
+
+              ; ---- QB Droop (QB starts at 0, should stay there) ----
+              errset(
+                qb_init = value(VT(qb_net) t_start)
+                qb_end  = value(VT(qb_net) t_end)
+                qb_droop = abs(qb_end - qb_init) * 1000.0
+              )
+
+              ; ---- Final Storage Node Voltages ----
+              errset(
+                fin_q  = value(VT(q_net) t_end)
+                fin_qb = value(VT(qb_net) t_end)
+              )
+
+              ; ---- Hold Noise Margin ----
+              ; Approximation: difference between Q and QB at end of hold
+              ; True HSNM requires DC butterfly curves, but this gives a
+              ; quick check of how far Q is from the metastable point
+              errset(
+                q_nm = (fin_q - fin_qb) * 1000.0
+              )
+
+              ; ---- Hold Success ----
+              ; Cell retains data if Q > 0.9*VDD and QB < 0.1*VDD
+              errset(
+                if(fin_q >= 0.0 && fin_qb >= 0.0 then
+                  if(fin_q > vdd*0.9 && fin_qb < vdd*0.1 then
+                    h_ok = 1
+                  )
+                )
+              )
+
+            else
+              printf("  WARNING: No tran results.\n")
+            ) ; end if rok
+          else
+            printf("  WARNING: Simulation failed.\n")
+          ) ; end if sok
+
+          ; --- Write CSV Row ---
+          fprintf(ofile "%d,%d,%d,%.2f,%d," pu pd acc vdd tmp)
+          fprintf(ofile "%.6f,%.6f," ilk plk)
+          fprintf(ofile "%.4f,%.4f," q_droop qb_droop)
+          fprintf(ofile "%.6f,%.6f," fin_q fin_qb)
+          fprintf(ofile "%.4f,%d\n" q_nm h_ok)
+
+          printf("  Ileak=%.3fnA Pleak=%.3fnW Qdroop=%.2fmV OK=%d\n" ilk plk q_droop h_ok)
+
+        ) ; temp
+      ) ; vdd
+    ) ; acc
+  ) ; pd
+) ; pu
+
+close(ofile)
+printf("\n========================================================\n")
+printf("  HOLD SWEEP COMPLETE! Total runs: %d\n" cnt)
+printf("  Output: %s\n" csv_file)
+printf("========================================================\n")
