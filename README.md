@@ -1,11 +1,15 @@
 # ⚡ 6T SRAM Bitcell Characterization, Validation, and ML-Assisted Design-Space Optimization in 18nm FinFET
 
 [![Cadence Spectre](https://img.shields.io/badge/Cadence-Spectre_Verification-red.svg)](https://www.cadence.com)
-[![Process](https://img.shields.io/badge/Technology-18nm_FinFET-blue.svg)](#)
+[![PDK](https://img.shields.io/badge/PDK-Cadence_18nm_cds__ff__mpt-blue.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Verification](https://img.shields.io/badge/Verification-24%2F24_Passed-brightgreen.svg)](#)
+[![Data Format](https://img.shields.io/badge/Results-CSV_Format-green.svg)](#)
 
-A comprehensive multi-objective design, machine learning surrogate modeling, and Cadence Spectre independent verification framework for sub-nanosecond 6T SRAM bitcells in an advanced 18nm FinFET process.
+A comprehensive multi-objective design, machine learning surrogate modeling, and Cadence Spectre closed-loop verification framework for sub-nanosecond 6T SRAM bitcells. 
+
+> **Important Technology & Methodology Note:**  
+> All bitcells, netlists, and SPICE simulations are designed and characterized using the **Cadence Generic 18nm Multi-Patterning FinFET Process Design Kit (`cds_ff_mpt`)** with `n1svt` and `p1svt` primitive devices in Cadence Virtuoso and Spectre SPICE (**not** academic predictive models like MIT PTM). All verified electrical results, metrics, and raw simulation waveforms are provided directly in open **`.csv` format**.
 
 ---
 
@@ -17,9 +21,25 @@ A comprehensive multi-objective design, machine learning surrogate modeling, and
 
 ---
 
+## 🛠️ PDK & Simulation Specifications
+
+| Parameter | Specification |
+| :--- | :--- |
+| **Process Design Kit (PDK)** | **Cadence Generic 18nm Multi-Patterning FinFET PDK (`cds_ff_mpt`)** |
+| **Device Primitives** | `n1svt` (18nm SVT NMOS) & `p1svt` (18nm SVT PMOS) |
+| **Channel Length** | Nominal L = 18 nm |
+| **Fin Sizing Space** | Pull-Up (PU): 1 to 5 fins \| Pull-Down (PD): 1 to 6 fins \| Access (ACC): 1 to 5 fins |
+| **Complete Cartesian Space** | **5 × 6 × 5 = 150 physical geometries** |
+| **Operating Voltages (VDD)** | 0.7V, 0.8V, 0.9V, 1.0V, 1.1V, 1.2V, 1.3V, 1.4V (8 discrete levels) |
+| **Total SPICE Netlist Sweeps** | **1,200 Characterized Simulation Configurations** |
+| **Simulation Environment** | Cadence Virtuoso IC6.1.8 & Spectre Circuit Simulator (Nominal TT corner, 27°C) |
+| **Output Data Accessibility** | **All raw waveforms and verified metrics exported to `.csv` files** |
+
+---
+
 ## 🏛️ Cadence Virtuoso 6T SRAM Bitcell & Testbenches
 
-| 18nm FinFET 6T Bitcell Schematic | Hold SNM DC Testbench |
+| 18nm FinFET 6T Bitcell Schematic (`cds_ff_mpt`) | Hold SNM DC Sweep Testbench |
 | :---: | :---: |
 | ![6T Bitcell Schematic](01_bitcell_design/6t_sram_bitcell_schematic.png) | ![HSNM Testbench](02_spice_characterization/hsnm_testbench_schematic.png) |
 
@@ -31,12 +51,27 @@ A comprehensive multi-objective design, machine learning surrogate modeling, and
 
 ## 🏆 4 Golden Verified Design Profiles
 
-| Design Profile | Transistor Sizing (PU / PD / ACC) | Supply Voltage (VDD) | RSNM (mV) | WTP (mV) | Write Delay (ps) | Hold Leakage (nA) | Verification Status |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Balanced Reference** | **1 / 1 / 1 fins** | **1.2 V** | 190.22 | 432.00 | 144.53 | 47.92 | **PASS (< 0.13% error)** |
-| **Low-Power Profile** | **1 / 1 / 1 fins** | **0.9 V** | 145.10 | 302.00 | 149.87 | 17.56 | **PASS (< 0.19% error)** |
-| **Fast SRAM Profile** | **5 / 2 / 4 fins** | **1.2 V** | 153.49 | 503.00 | 134.58 | 58.74 | **PASS (< 0.04% error)** |
-| **CR-Enhanced Stability** | **2 / 3 / 2 fins** | **1.2 V** | 204.26 | 373.00 | 144.24 | 49.31 | **PASS (< 0.13% error)** |
+| Design Profile | Transistor Sizing (PU / PD / ACC) | Supply Voltage (VDD) | RSNM (mV) | WTP (mV) | Write Delay (ps) | Hold Leakage (nA) | Verification Status | Raw CSV Waveforms |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Balanced Reference** | **1 / 1 / 1 fins** | **1.2 V** | 190.22 | 432.00 | 144.53 | 47.92 | **PASS (< 0.13% error)** | [balanced CSVs](03_dataset/raw_waveforms/balanced/) |
+| **Low-Power Profile** | **1 / 1 / 1 fins** | **0.9 V** | 145.10 | 302.00 | 149.87 | 17.56 | **PASS (< 0.19% error)** | [low_power CSVs](03_dataset/raw_waveforms/low_power/) |
+| **Fast SRAM Profile** | **5 / 2 / 4 fins** | **1.2 V** | 153.49 | 503.00 | 134.58 | 58.74 | **PASS (< 0.04% error)** | [fast_sram CSVs](03_dataset/raw_waveforms/fast_sram/) |
+| **CR-Enhanced Stability** | **2 / 3 / 2 fins** | **1.2 V** | 204.26 | 373.00 | 144.24 | 49.31 | **PASS (< 0.13% error)** | [cr_enhanced CSVs](03_dataset/raw_waveforms/cr_enhanced/) |
+
+---
+
+## 📁 Verified Results Available Directly in `.csv` Format
+
+All characterized parameters, surrogate audit predictions, and raw Cadence simulation waveforms are provided in open `.csv` files:
+
+1. 📄 **Master Unified Dataset (1,200 rows × 62 parameters):**  
+   [`03_dataset/sram_master_unified_dataset.csv`](03_dataset/sram_master_unified_dataset.csv)
+2. 📄 **Golden Bitcell Verification Sheet (Baseline vs. Cadence Measured):**  
+   [`07_verification/CADENCE_GOLDEN_VERIFICATION_TEMPLATE.csv`](07_verification/CADENCE_GOLDEN_VERIFICATION_TEMPLATE.csv)
+3. 📄 **Comprehensive 5-Category ML Parameter Audit:**  
+   [`07_verification/full_sram_parameters_ml_audit.csv`](07_verification/full_sram_parameters_ml_audit.csv)
+4. 📁 **24 Raw Cadence Spectre Simulation Waveforms:**  
+   [`03_dataset/raw_waveforms/`](03_dataset/raw_waveforms/) (Categorized by profile: HSNM, RSNM, WTP, Write_Hold, Read0, Read1)
 
 ---
 
@@ -60,7 +95,7 @@ A comprehensive multi-objective design, machine learning surrogate modeling, and
 
 The project follows a rigorous circuit design, characterization, surrogate modeling, and verification hierarchy:
 - **The 6T SRAM Bitcell is the Design Under Test (DUT)**
-- **SPICE Simulation is the Characterization Mechanism**
+- **SPICE Simulation (`cds_ff_mpt`) is the Characterization Mechanism**
 - **Machine Learning is the Fast Design-Space Optimization Mechanism**
 - **Spectre Re-Simulation is the Independent Verification Mechanism**
 
@@ -72,7 +107,7 @@ STAGE 1: 6T SRAM BITCELL ARCHITECTURE & PARAMETER DEFINITION
                     ↓
 STAGE 2: CADENCE SCHEMATICS & TESTBENCH SETUP
          Configure Hold (WL=0), Read (WL=VDD, precharged BL/BLB), Write (BL pulsed low),
-         and Standby Leakage testbenches.
+         and Standby Leakage testbenches in cds_ff_mpt.
                     ↓
 STAGE 3: AUTOMATED SPICE DESIGN-SPACE SWEEP
          Execute 1,200 Cadence Spectre netlist sweeps (150 Cartesian geometries × 8 VDD levels).
@@ -81,8 +116,8 @@ STAGE 4: ELECTRICAL CHARACTERIZATION & FEATURE EXTRACTION
          Extract static margins (HSNM, RSNM, WSNM), dynamic write trip points (WTP, WNM),
          50%-to-50% switching delays, dynamic energy, and standby leakage.
                     ↓
-STAGE 5: UNIFIED MASTER DATASET CONSOLIDATION
-         Structure 1,200 SPICE-characterized configurations across 60+ electrical metrics.
+STAGE 5: UNIFIED MASTER DATASET CONSOLIDATION (.CSV)
+         Structure 1,200 SPICE-characterized configurations across 60+ electrical metrics in CSV.
                     ↓
 STAGE 6: ML SURROGATE MODELING & RIGOROUS EVALUATION
          Train Random Forest & Gradient Boosted regressors; evaluate under both
@@ -104,7 +139,7 @@ STAGE 10: INDEPENDENT CADENCE SPECTRE RE-SIMULATION & VERIFICATION
           the < 1.0% individual-error threshold (mean absolute error < 0.3%).
                     ↓
 STAGE 11: PUBLICATION ARTIFACTS & GITHUB PRESENTATION
-          Generate publication-grade waveform plots, design notes, and documentation.
+          Generate publication-grade waveform plots, design notes, and CSV data packages.
 ```
 
 ---
