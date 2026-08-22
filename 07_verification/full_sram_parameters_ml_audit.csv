@@ -1,0 +1,12 @@
+Category,Parameter,Unit,Min_Val,Max_Val,Best_Model,Unseen_Geom_R2,Unseen_Geom_MAE,Interpolation_R2
+1. Static Stability Margins,Read Static Noise Margin (RSNM),mV,16.93,358.20,Gradient Boost,0.9876,5.132 mV,0.9945
+1. Static Stability Margins,Hold Static Noise Margin (HSNM),mV,142.88,424.75,Gradient Boost,0.9971,2.275 mV,0.9981
+1. Static Stability Margins,Write Static Noise Margin (WSNM / WTP),mV,3.27,1300.00,Random Forest,0.9631,24.231 mV,0.9702
+2. Dynamic Read Mode,Worst Read Disturb Voltage,mV,21.90,808.77,Random Forest,0.9486,3.927 mV,0.9989
+2. Dynamic Read Mode,Read Access Energy,fJ,0.10,1.42,Gradient Boost,0.9998,0.003 fJ,0.9998
+2. Dynamic Read Mode,Read Operation Power,uW,0.01,0.14,Gradient Boost,0.9998,0.000 uW,0.9998
+3. Standby & Leakage,Static Standby Power,uW,0.01,2.21,Random Forest,0.4635,0.041 uW,0.3440
+3. Standby & Leakage,Average Hold Leakage Current,nA,9.21,1700.38,Random Forest,0.5405,34.908 nA,0.4867
+4. Dynamic Write Mode,Peak Write Current,uA,5.19,175.70,Gradient Boost,0.9919,1.862 uA,0.9970
+4. Dynamic Write Mode,Average Dynamic Write Energy,fJ,0.20,1395.14,Random Forest,0.8443,13.967 fJ,0.9901
+4. Dynamic Write Mode,Worst Write Switching Delay,ps,-1.00,1180.74,Random Forest,0.2942,21.825 ps,0.9167

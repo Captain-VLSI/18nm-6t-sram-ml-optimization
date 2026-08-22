@@ -1,0 +1,5 @@
+Config_ID,SRAM_Role,PU,PD,ACC,CR,PR,Verify_VDD_V,Exp_HSNM_mV,Exp_RSNM_mV,Exp_WSNM_mV,Exp_Delay_ps,Exp_Leakage_nA,Exp_Energy_fJ,Meas_HSNM_mV,Meas_RSNM_mV,Meas_WSNM_mV,Meas_Write0_Delay_ps,Meas_Write1_Delay_ps,Meas_Worst_Delay_ps,Meas_Hold_Leakage_nA,Meas_Write_Energy_fJ,Read_Func_PassFail,Write_Func_PassFail,Hold_Func_PassFail
+A,Low-Power SRAM,1,1,1,1.00,1.00,0.9,281.59,145.38,303.19,149.97,17.55990,0.833298,,,,,,,,,,,
+B,Balanced SRAM Reference,1,1,1,1.00,1.00,1.2,371.37,190.46,433.14,144.59,31.41840,1.775785,,,,,,,,,,,
+C,Fast SRAM,5,2,4,0.50,1.25,1.2,350.49,153.69,503.19,134.19,67.17640,4.268155,,,,,,,,,,,
+D,CR-Enhanced Stability Reference,2,3,2,1.50,1.00,1.2,339.71,204.52,373.19,143.93,80.79210,3.704390,,,,,,,,,,,
