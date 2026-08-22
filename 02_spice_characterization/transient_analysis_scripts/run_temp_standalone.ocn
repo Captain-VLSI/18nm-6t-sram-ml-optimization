@@ -1,0 +1,287 @@
+
+simulator('spectre)
+temp(27)
+
+fp = outfile("/home/vlsi-lab/Ganesh_Mtech/Mtech_project_ganesh/meas_standalone_temp.txt" "w")
+
+; ==============================================================================
+; 1. READ TRANSIENT ANALYSIS (0 to 10ns Read Pulse Window)
+; ==============================================================================
+design("/home/vlsi-lab/simulation/6tsram_r_trans_tb/spectre/schematic/netlist/netlist")
+resultsDir("/home/vlsi-lab/simulation/6tsram_r_trans_tb/spectre/schematic")
+ic("/q" 0.6 "/qb" 0.0)
+desVar("nfin_pu" 1)
+desVar("nfin_pd" 1)
+desVar("nfin_acc" 1)
+desVar("vdd_val" 0.6)
+
+analysis('tran ?stop 20n ?errpreset 'moderate)
+sok_r = errset(run())
+
+if(sok_r then
+    selectResult('tran)
+    q_w = v("/q")
+    qb_w = v("/qb")
+    wl_w = v("/w")
+    
+    ; Fail-proof terminal current detection for V0 or V3 supply source
+    i_vdd_r = i("/V0/PLUS")
+    if(i_vdd_r == nil then i_vdd_r = i("V0:p"))
+    if(i_vdd_r == nil then i_vdd_r = i("/V0"))
+    if(i_vdd_r == nil then i_vdd_r = i("V0"))
+    if(i_vdd_r == nil then i_vdd_r = i("/V3/PLUS"))
+    if(i_vdd_r == nil then i_vdd_r = i("V3:p"))
+    if(i_vdd_r == nil then i_vdd_r = i("/V3"))
+    if(i_vdd_r == nil then i_vdd_r = i("V3"))
+    if(i_vdd_r != nil then i_vdd_r = -i_vdd_r)
+    
+    if(q_w != nil && qb_w != nil then
+        q_clip = clip(q_w 0 10n)
+        qb_clip = clip(qb_w 0 10n)
+        
+        q_start = value(q_w 0)
+        if(q_start == nil then q_start = value(q_clip 0))
+        qb_start = value(qb_w 0)
+        if(qb_start == nil then qb_start = value(qb_clip 0))
+        
+        t_wl50 = cross(wl_w 0.5*0.6 1 "rising")
+        if(t_wl50 == nil then t_wl50 = 0.05n)
+        
+        q_end = value(q_clip 9.99n)
+        qb_end = value(qb_clip 9.99n)
+        
+        if(q_start > 0.5 * 0.6 then
+            q_min_val = ymin(q_clip)
+            q_drop = (0.6 - q_min_val) * 1000.0
+            q_disturb = q_drop
+            
+            qb_max_val = ymax(qb_clip)
+            qb_disturb = (qb_max_val - qb_start) * 1000.0
+            
+            t_q_peak = xmin(q_clip)
+            if(t_q_peak == nil then t_q_peak = t_wl50)
+            
+            t_qb_peak = xmax(qb_clip)
+            if(t_qb_peak == nil then t_qb_peak = t_wl50)
+            
+            read_succ = 1
+            if(q_end < 0.5 * 0.6 || qb_end > 0.5 * 0.6 then read_succ = 0)
+        else
+            qb_min_val = ymin(qb_clip)
+            q_drop = (qb_start - qb_min_val) * 1000.0
+            qb_disturb = q_drop
+            
+            q_max_val = ymax(q_clip)
+            q_disturb = (q_max_val - q_start) * 1000.0
+            
+            t_q_peak = xmax(q_clip)
+            if(t_q_peak == nil then t_q_peak = t_wl50)
+            
+            t_qb_peak = xmin(qb_clip)
+            if(t_qb_peak == nil then t_qb_peak = t_wl50)
+            
+            read_succ = 1
+            if(q_end > 0.5 * 0.6 || qb_end < 0.5 * 0.6 then read_succ = 0)
+        )
+        
+        dt_q_ps = (t_q_peak - t_wl50) * 1e12
+        if(dt_q_ps < 0 then dt_q_ps = 0.0)
+        
+        dt_qb_ps = (t_qb_peak - t_wl50) * 1e12
+        if(dt_qb_ps < 0 then dt_qb_ps = 0.0)
+        
+        i_read_avg_ua = 0.0
+        i_read_peak_ua = 0.0
+        p_read_uw = 0.0
+        e_read_fj = 0.0
+        
+        if(i_vdd_r != nil then
+            i_clip = clip(i_vdd_r 0 10n)
+            i_read_int = integ(i_clip 0 10n)
+            i_read_avg_ua = (i_read_int / 10e-9) * 1e6
+            i_read_peak_ua = ymax(i_clip) * 1e6
+            p_read_uw = 0.6 * i_read_avg_ua
+            e_read_fj = 0.6 * i_read_int * 1e15
+        )
+        
+        fprintf(fp "READ: max_q_disturb_mv=%g max_qb_disturb_mv=%g q_drop_mv=%g wl_to_q_disturb_peak_ps=%g wl_to_qb_disturb_peak_ps=%g average_read_current_ua=%g peak_read_current_ua=%g read_power_uw=%g read_energy_fj=%g read_success=%d\n"
+            q_disturb qb_disturb q_drop dt_q_ps dt_qb_ps i_read_avg_ua i_read_peak_ua p_read_uw e_read_fj read_succ)
+    )
+else
+    fprintf(fp "READ_ERROR: Spectre run failed for Read testbench\n")
+)
+
+; ==============================================================================
+; 2. WRITE & HOLD TRANSIENT ANALYSIS (0 to 40ns Sequence)
+; ==============================================================================
+design("/home/vlsi-lab/simulation/6tsram_w_tb/spectre/schematic/netlist/netlist")
+resultsDir("/home/vlsi-lab/simulation/6tsram_w_tb/spectre/schematic")
+desVar("nfin_pu" 1)
+desVar("nfin_pd" 1)
+desVar("nfin_acc" 1)
+desVar("vdd_val" 0.6)
+
+analysis('tran ?stop 40n ?errpreset 'moderate)
+sok_w = errset(run())
+
+if(sok_w then
+    selectResult('tran)
+    q_w = v("/q")
+    qb_w = v("/qb")
+    wl_w = v("/w")
+    
+    i_vdd_w = i("/V3/PLUS")
+    if(i_vdd_w == nil then i_vdd_w = i("V3:p"))
+    if(i_vdd_w == nil then i_vdd_w = i("/V3"))
+    if(i_vdd_w == nil then i_vdd_w = i("V3"))
+    if(i_vdd_w != nil then i_vdd_w = -i_vdd_w)
+    
+    if(q_w != nil && qb_w != nil then
+        ; ----------------------------------------------------------------------
+        ; A. WRITE-1 (0ns to 10ns): Forcing Q -> VDD, QB -> 0
+        ; ----------------------------------------------------------------------
+        q_w1_clip = clip(q_w 0 10n)
+        qb_w1_clip = clip(qb_w 0 10n)
+        
+        q_w1_start = value(q_w 0)
+        qb_w1_start = value(qb_w 0)
+        
+        t_w1_wl50 = cross(wl_w 0.5*0.6 1 "rising")
+        if(t_w1_wl50 == nil then t_w1_wl50 = 0.05n)
+        
+        t_w1_q50 = cross(q_w1_clip 0.5*0.6 1 "rising")
+        w1_delay_ps = -1.0
+        if(t_w1_q50 != nil then
+            w1_delay_ps = (t_w1_q50 - t_w1_wl50) * 1e12
+            if(w1_delay_ps < 0 then w1_delay_ps = 0.0)
+        )
+        
+        w1_q_disturb = (ymax(q_w1_clip) - q_w1_start) * 1000.0
+        w1_qb_disturb = (qb_w1_start - ymin(qb_w1_clip)) * 1000.0
+        
+        i_w1_avg_ua = 0.0
+        i_w1_peak_ua = 0.0
+        p_w1_uw = 0.0
+        e_w1_fj = 0.0
+        if(i_vdd_w != nil then
+            i_w1_clip = clip(i_vdd_w 0 10n)
+            i_w1_int = integ(i_w1_clip 0 10n)
+            i_w1_avg_ua = (i_w1_int / 10e-9) * 1e6
+            i_w1_peak_ua = ymax(i_w1_clip) * 1e6
+            p_w1_uw = 0.6 * i_w1_avg_ua
+            e_w1_fj = 0.6 * i_w1_int * 1e15
+        )
+        
+        q_w1_end = value(q_w 9.99n)
+        qb_w1_end = value(qb_w 9.99n)
+        w1_succ = 0
+        if(q_w1_end > 0.8 * 0.6 && qb_w1_end < 0.2 * 0.6 then w1_succ = 1)
+        
+        fprintf(fp "WRITE_1: write_delay_ps=%g max_q_disturb_mv=%g max_qb_disturb_mv=%g average_write_current_ua=%g peak_write_current_ua=%g write_power_uw=%g write_energy_fj=%g write_success=%d\n"
+            w1_delay_ps w1_q_disturb w1_qb_disturb i_w1_avg_ua i_w1_peak_ua p_w1_uw e_w1_fj w1_succ)
+
+        ; ----------------------------------------------------------------------
+        ; B. HOLD-1 (10ns to 20ns): Stored State = 1 (Q=HIGH, QB=LOW)
+        ; ----------------------------------------------------------------------
+        q_h1_clip = clip(q_w 10n 20n)
+        qb_h1_clip = clip(qb_w 10n 20n)
+        
+        h1_high_drop = (0.6 - ymin(q_h1_clip)) * 1000.0
+        h1_low_disturb = (ymax(qb_h1_clip) - 0.0) * 1000.0
+        
+        i_h1_avg_na = 0.0
+        p_h1_uw = 0.0
+        e_h1_fj = 0.0
+        if(i_vdd_w != nil then
+            i_h1_clip = clip(i_vdd_w 10n 20n)
+            i_h1_int = integ(i_h1_clip 10n 20n)
+            i_h1_avg_na = (i_h1_int / 10e-9) * 1e9
+            p_h1_uw = 0.6 * (i_h1_int / 10e-9) * 1e6
+            e_h1_fj = 0.6 * i_h1_int * 1e15
+        )
+        
+        q_h1_end = value(q_w 19.99n)
+        qb_h1_end = value(qb_w 19.99n)
+        h1_succ = 0
+        if(q_h1_end > 0.7 * 0.6 && qb_h1_end < 0.3 * 0.6 then h1_succ = 1)
+        
+        fprintf(fp "HOLD_1: hold_q_drop_mv=%g hold_qb_disturb_mv=%g hold_leakage_current_na=%g hold_power_uw=%g hold_energy_fj=%g hold_success=%d\n"
+            h1_high_drop h1_low_disturb i_h1_avg_na p_h1_uw e_h1_fj h1_succ)
+
+        ; ----------------------------------------------------------------------
+        ; C. WRITE-0 (20ns to 30ns): Forcing Q -> 0, QB -> VDD
+        ; ----------------------------------------------------------------------
+        q_w0_clip = clip(q_w 20n 30n)
+        qb_w0_clip = clip(qb_w 20n 30n)
+        
+        q_w0_start = value(q_w 20n)
+        qb_w0_start = value(qb_w 20n)
+        
+        t_w0_wl50 = cross(wl_w 0.5*0.6 2 "rising")
+        if(t_w0_wl50 == nil then t_w0_wl50 = 20.05n)
+        
+        t_w0_q50 = cross(q_w0_clip 0.5*0.6 1 "falling")
+        w0_delay_ps = -1.0
+        if(t_w0_q50 != nil then
+            w0_delay_ps = (t_w0_q50 - t_w0_wl50) * 1e12
+            if(w0_delay_ps < 0 then w0_delay_ps = 0.0)
+        )
+        
+        w0_q_disturb = (q_w0_start - ymin(q_w0_clip)) * 1000.0
+        w0_qb_disturb = (ymax(qb_w0_clip) - qb_w0_start) * 1000.0
+        
+        i_w0_avg_ua = 0.0
+        i_w0_peak_ua = 0.0
+        p_w0_uw = 0.0
+        e_w0_fj = 0.0
+        if(i_vdd_w != nil then
+            i_w0_clip = clip(i_vdd_w 20n 30n)
+            i_w0_int = integ(i_w0_clip 20n 30n)
+            i_w0_avg_ua = (i_w0_int / 10e-9) * 1e6
+            i_w0_peak_ua = ymax(i_w0_clip) * 1e6
+            p_w0_uw = 0.6 * i_w0_avg_ua
+            e_w0_fj = 0.6 * i_w0_int * 1e15
+        )
+        
+        q_w0_end = value(q_w 29.99n)
+        qb_w0_end = value(qb_w 29.99n)
+        w0_succ = 0
+        if(q_w0_end < 0.2 * 0.6 && qb_w0_end > 0.8 * 0.6 then w0_succ = 1)
+        
+        fprintf(fp "WRITE_0: write_delay_ps=%g max_q_disturb_mv=%g max_qb_disturb_mv=%g average_write_current_ua=%g peak_write_current_ua=%g write_power_uw=%g write_energy_fj=%g write_success=%d\n"
+            w0_delay_ps w0_q_disturb w0_qb_disturb i_w0_avg_ua i_w0_peak_ua p_w0_uw e_w0_fj w0_succ)
+
+        ; ----------------------------------------------------------------------
+        ; D. HOLD-0 (30ns to 40ns): Stored State = 0 (QB=HIGH, Q=LOW)
+        ; ----------------------------------------------------------------------
+        q_h0_clip = clip(q_w 30n 40n)
+        qb_h0_clip = clip(qb_w 30n 40n)
+        
+        h0_high_drop = (0.6 - ymin(qb_h0_clip)) * 1000.0
+        h0_low_disturb = (ymax(q_h0_clip) - 0.0) * 1000.0
+        
+        i_h0_avg_na = 0.0
+        p_h0_uw = 0.0
+        e_h0_fj = 0.0
+        if(i_vdd_w != nil then
+            i_h0_clip = clip(i_vdd_w 30n 40n)
+            i_h0_int = integ(i_h0_clip 30n 40n)
+            i_h0_avg_na = (i_h0_int / 10e-9) * 1e9
+            p_h0_uw = 0.6 * (i_h0_int / 10e-9) * 1e6
+            e_h0_fj = 0.6 * i_h0_int * 1e15
+        )
+        
+        q_h0_end = value(q_w 39.99n)
+        qb_h0_end = value(qb_w 39.99n)
+        h0_succ = 0
+        if(qb_h0_end > 0.7 * 0.6 && q_h0_end < 0.3 * 0.6 then h0_succ = 1)
+        
+        fprintf(fp "HOLD_0: hold_q_drop_mv=%g hold_qb_disturb_mv=%g hold_leakage_current_na=%g hold_power_uw=%g hold_energy_fj=%g hold_success=%d\n"
+            h0_high_drop h0_low_disturb i_h0_avg_na p_h0_uw e_h0_fj h0_succ)
+    )
+else
+    fprintf(fp "WRITE_HOLD_ERROR: Spectre run failed for Write/Hold testbench\n")
+)
+
+close(fp)
+exit()
