@@ -4,12 +4,54 @@
 [![PDK](https://img.shields.io/badge/PDK-Cadence_18nm_cds__ff__mpt-blue.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Verification](https://img.shields.io/badge/Verification-24%2F24_Passed-brightgreen.svg)](#)
-[![Data Format](https://img.shields.io/badge/Results-CSV_Format-green.svg)](#)
+[![Data Format](https://img.shields.io/badge/Results-Open_CSV_Package-green.svg)](#)
 
-A comprehensive multi-objective design, machine learning surrogate modeling, and Cadence Spectre closed-loop verification framework for sub-nanosecond 6T SRAM bitcells. 
+A comprehensive multi-objective design, machine learning surrogate modeling, and Cadence Spectre closed-loop verification framework for sub-nanosecond 6T SRAM bitcells.
 
-> **Important Technology & Methodology Note:**  
-> All bitcells, netlists, and SPICE simulations are designed and characterized using the **Cadence Generic 18nm Multi-Patterning FinFET Process Design Kit (`cds_ff_mpt`)** with `n1svt` and `p1svt` primitive devices in Cadence Virtuoso and Spectre SPICE (**not** academic predictive models like MIT PTM). All verified electrical results, metrics, and raw simulation waveforms are provided directly in open **`.csv` format**.
+---
+
+## 🏛️ 6T SRAM Bitcell Architecture (Design Under Test)
+
+<p align="center">
+  <img src="01_bitcell_design/6t_sram_bitcell_schematic.png" alt="6T SRAM Bitcell Schematic" width="750"/>
+</p>
+
+The standard 6T SRAM bitcell is composed of 6 FinFET devices categorized into 3 complementary functional pairs:
+- **Pull-Up Transistors (P1 / P2):** Standard-threshold PMOS (`p1svt`) devices maintaining the HIGH logic state against leakage.
+- **Pull-Down Transistors (N1 / N2):** Standard-threshold NMOS (`n1svt`) devices pulling the internal node to GND during read/write transitions.
+- **Access Transistors (AX1 / AX2):** Pass-gate NMOS (`n1svt`) devices gating access to Bitline (`BL`) and Bitline-Bar (`BLB`) controlled by Wordline (`WL`).
+- **Internal Storage Latch (`Q` / `QB`):** Cross-coupled inverters forming the bistable storage element.
+
+### Discrete FinFET Sizing Boundaries (Complete Cartesian Space = 150 Geometries):
+Transistor width in modern FinFET processes is quantized by discrete vertical fins ($W = N_{\text{fin}} \times [2H_{\text{fin}} + T_{\text{fin}}]$):
+- **Pull-Up (PU):** 1 to 5 fins (5 values)
+- **Pull-Down (PD):** 1 to 6 fins (6 values)
+- **Access (ACC):** 1 to 5 fins (5 values)
+- **Total Discrete Geometries:** $5 \times 6 \times 5 = 150$ physical bitcell configurations.
+
+---
+
+## 🏆 Master Comparison of the 4 Golden Design Profiles
+
+All electrical parameters characterized at nominal room temperature (27°C, TT Corner) using Cadence Spectre:
+
+| Electrical Parameter | Unit | Balanced Reference (1/1/1 @ 1.2V) | Low-Power Profile (1/1/1 @ 0.9V) | Fast SRAM Profile (5/2/4 @ 1.2V) | CR-Enhanced Stability (2/3/2 @ 1.2V) |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Fin Sizing (PU / PD / ACC)** | fins | **1 / 1 / 1** | **1 / 1 / 1** | **5 / 2 / 4** | **2 / 3 / 2** |
+| **Supply Voltage (VDD)** | V | **1.2 V** | **0.9 V** | **1.2 V** | **1.2 V** |
+| **Cell Ratio (CR = PD / ACC)** | - | 1.00 | 1.00 | 0.50 | 1.50 |
+| **Pull-Up Ratio (PR = PU / ACC)** | - | 1.00 | 1.00 | 1.25 | 1.00 |
+| **Hold SNM (HSNM)** | mV | 368.11 | 281.54 | 350.68 | 339.56 |
+| **Read SNM (RSNM)** | mV | 190.22 | 145.10 | 153.49 | **204.26** *(+7.4% max stability)* |
+| **Write Static Margin (WSNM / WTP)** | mV | 432.00 | 302.00 | **503.00** *(+16.4% writeability)* | 373.00 |
+| **Write Noise Margin (WNM)** | mV | 89.40 | 68.20 | 108.50 | 74.10 |
+| **50%-50% Write Delay ($T_{\text{write}}$)** | ps | 144.53 | 149.87 | **134.58** *(sub-135 ps fast access)* | 144.24 |
+| **Dynamic Write Energy** | fJ | 0.312 | **0.168** *(-46.1% energy)* | 0.445 | 0.328 |
+| **Worst Read Disturb Bump** | mV | 48.20 | 34.10 | 62.40 | **38.90** *(strongest suppression)* |
+| **Standby Leakage Current ($I_{\text{leak}}$)** | nA | 47.92 | **17.56** *(-63.3% leakage)* | 58.74 | 49.31 |
+| **Static Standby Power ($P_{\text{leak}}$)** | uW | 0.057 | **0.016** *(-71.9% power)* | 0.070 | 0.059 |
+| **Verification Sign-Off** | - | **PASS (< 0.13% error)** | **PASS (< 0.19% error)** | **PASS (< 0.04% error)** | **PASS (< 0.13% error)** |
+| **Raw Simulation Waveforms** | CSV | [balanced CSVs](03_dataset/raw_waveforms/balanced/) | [low_power CSVs](03_dataset/raw_waveforms/low_power/) | [fast_sram CSVs](03_dataset/raw_waveforms/fast_sram/) | [cr_enhanced CSVs](03_dataset/raw_waveforms/cr_enhanced/) |
 
 ---
 
@@ -21,57 +63,34 @@ A comprehensive multi-objective design, machine learning surrogate modeling, and
 
 ---
 
-## 🛠️ PDK & Simulation Specifications
+## 🔒 Reproducibility Scope: What is Actually Reproducible?
 
-| Parameter | Specification |
-| :--- | :--- |
-| **Process Design Kit (PDK)** | **Cadence Generic 18nm Multi-Patterning FinFET PDK (`cds_ff_mpt`)** |
-| **Device Primitives** | `n1svt` (18nm SVT NMOS) & `p1svt` (18nm SVT PMOS) |
-| **Channel Length** | Nominal L = 18 nm |
-| **Fin Sizing Space** | Pull-Up (PU): 1 to 5 fins \| Pull-Down (PD): 1 to 6 fins \| Access (ACC): 1 to 5 fins |
-| **Complete Cartesian Space** | **5 × 6 × 5 = 150 physical geometries** |
-| **Operating Voltages (VDD)** | 0.7V, 0.8V, 0.9V, 1.0V, 1.1V, 1.2V, 1.3V, 1.4V (8 discrete levels) |
-| **Total SPICE Netlist Sweeps** | **1,200 Characterized Simulation Configurations** |
-| **Simulation Environment** | Cadence Virtuoso IC6.1.8 & Spectre Circuit Simulator (Nominal TT corner, 27°C) |
-| **Output Data Accessibility** | **All raw waveforms and verified metrics exported to `.csv` files** |
+To ensure full technical transparency:
 
----
-
-## 🏛️ Cadence Virtuoso 6T SRAM Bitcell & Testbenches
-
-| 18nm FinFET 6T Bitcell Schematic (`cds_ff_mpt`) | Hold SNM DC Sweep Testbench |
-| :---: | :---: |
-| ![6T Bitcell Schematic](01_bitcell_design/6t_sram_bitcell_schematic.png) | ![HSNM Testbench](02_spice_characterization/hsnm_testbench_schematic.png) |
-
-| Transient Write & Hold Testbench | Cadence ADE Transient Multi-Cycle Response |
-| :---: | :---: |
-| ![Write Hold Testbench](02_spice_characterization/write_hold_testbench_schematic.png) | ![Write Hold Waveform](08_results/figures/write_hold_cadence_waveform_graph.png) |
+| Component | Status | Requirements & Dependencies |
+| :--- | :---: | :--- |
+| **Master Dataset Analysis** | ✅ **Fully Reproducible** | Python 3.10+, `numpy`, `pandas` (Executes from cloned repo) |
+| **ML Surrogate Model Training** | ✅ **Fully Reproducible** | `scikit-learn` (Trains Random Forest & Gradient Boosting in < 10 seconds) |
+| **Unseen-Geometry Benchmark** | ✅ **Fully Reproducible** | `GroupShuffleSplit` across 30 held-out physical bitcell geometries |
+| **Pareto Dominance Analysis** | ✅ **Fully Reproducible** | Extracts non-dominated trade-off frontiers across all 150 geometries |
+| **Figure & Waveform Plotting** | ✅ **Fully Reproducible** | `matplotlib`, `scipy` (Regenerates all 7 high-DPI figures from raw CSVs) |
+| **Verification Error Checks** | ✅ **Fully Reproducible** | Validates parity between baseline and measured metrics (< 0.3% MAE) |
+| **Raw Cadence Spectre Netlist Sweeps** | ⚠️ **Licensed Tool Required** | Requires Cadence Virtuoso / Spectre & Generic 18nm FinFET PDK (`cds_ff_mpt`) |
 
 ---
 
-## 🏆 4 Golden Verified Design Profiles
+## 🔬 Detailed Cadence Testbench Conditions
 
-| Design Profile | Transistor Sizing (PU / PD / ACC) | Supply Voltage (VDD) | RSNM (mV) | WTP (mV) | Write Delay (ps) | Hold Leakage (nA) | Verification Status | Raw CSV Waveforms |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Balanced Reference** | **1 / 1 / 1 fins** | **1.2 V** | 190.22 | 432.00 | 144.53 | 47.92 | **PASS (< 0.13% error)** | [balanced CSVs](03_dataset/raw_waveforms/balanced/) |
-| **Low-Power Profile** | **1 / 1 / 1 fins** | **0.9 V** | 145.10 | 302.00 | 149.87 | 17.56 | **PASS (< 0.19% error)** | [low_power CSVs](03_dataset/raw_waveforms/low_power/) |
-| **Fast SRAM Profile** | **5 / 2 / 4 fins** | **1.2 V** | 153.49 | 503.00 | 134.58 | 58.74 | **PASS (< 0.04% error)** | [fast_sram CSVs](03_dataset/raw_waveforms/fast_sram/) |
-| **CR-Enhanced Stability** | **2 / 3 / 2 fins** | **1.2 V** | 204.26 | 373.00 | 144.24 | 49.31 | **PASS (< 0.13% error)** | [cr_enhanced CSVs](03_dataset/raw_waveforms/cr_enhanced/) |
+All 1,200 SPICE netlist simulations were characterized under the following explicit boundary conditions:
 
----
-
-## 📁 Verified Results Available Directly in `.csv` Format
-
-All characterized parameters, surrogate audit predictions, and raw Cadence simulation waveforms are provided in open `.csv` files:
-
-1. 📄 **Master Unified Dataset (1,200 rows × 62 parameters):**  
-   [`03_dataset/sram_master_unified_dataset.csv`](03_dataset/sram_master_unified_dataset.csv)
-2. 📄 **Golden Bitcell Verification Sheet (Baseline vs. Cadence Measured):**  
-   [`07_verification/CADENCE_GOLDEN_VERIFICATION_TEMPLATE.csv`](07_verification/CADENCE_GOLDEN_VERIFICATION_TEMPLATE.csv)
-3. 📄 **Comprehensive 5-Category ML Parameter Audit:**  
-   [`07_verification/full_sram_parameters_ml_audit.csv`](07_verification/full_sram_parameters_ml_audit.csv)
-4. 📁 **24 Raw Cadence Spectre Simulation Waveforms:**  
-   [`03_dataset/raw_waveforms/`](03_dataset/raw_waveforms/) (Categorized by profile: HSNM, RSNM, WTP, Write_Hold, Read0, Read1)
+| Simulation Mode | Wordline (WL) | Bitline (BL) | Bitline-Bar (BLB) | Initial Node State | Sweep / Analysis Parameters | Extraction Target |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Hold Mode** | Held at `0 V` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Hold SNM (HSNM) |
+| **Read Mode** | Driven to `VDD` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Read SNM (RSNM) |
+| **Write Trip Point** | Driven to `VDD` | Swept `0 V -> VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Sweep on BL, Step = 1 mV | Trip Voltage ($V_{\text{trip}}$) & WNM |
+| **Transient Write** | Pulse: $t_{\text{pulse}} = 10\text{ ns}$ ($t_r = t_f = 10\text{ ps}$) | Driven `0 V` | Held at `VDD` | `Q = VDD, QB = 0` | Transient: 0 to 100 ns, MaxStep = 1 ps | 50%-50% Delay ($T_{\text{write}}$), Energy |
+| **Transient Read** | Pulse: $t_{\text{pulse}} = 5\text{ ns}$ ($t_r = t_f = 10\text{ ps}$) | Precharged `VDD` | Precharged `VDD` | `Q = 0, QB = VDD` | Transient: 0 to 50 ns, MaxStep = 0.5 ps | Read Disturb Bump ($\Delta V_Q$), $E_{\text{read}}$ |
+| **Standby Leakage** | Held at `0 V` | Held at `VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Operating Point + Quiescent Transient | Standby Leakage ($I_{\text{leak}}$), $P_{\text{leak}}$ |
 
 ---
 
@@ -91,60 +110,20 @@ All characterized parameters, surrogate audit predictions, and raw Cadence simul
 
 ---
 
-## 🔄 End-to-End Engineering Methodology Flow
+## 🤖 ML Surrogate Methodology & Rigorous Evaluation
 
-The project follows a rigorous circuit design, characterization, surrogate modeling, and verification hierarchy:
-- **The 6T SRAM Bitcell is the Design Under Test (DUT)**
-- **SPICE Simulation (`cds_ff_mpt`) is the Characterization Mechanism**
-- **Machine Learning is the Fast Design-Space Optimization Mechanism**
-- **Spectre Re-Simulation is the Independent Verification Mechanism**
+### Machine Learning Hyperparameters & Model Architecture:
 
-```text
-STAGE 1: 6T SRAM BITCELL ARCHITECTURE & PARAMETER DEFINITION
-         Define 6T topology, transistor roles (P1/P2 PU, N1/N2 PD, AX1/AX2 ACC),
-         and FinFET sizing boundaries: PU = 1–5 fins, PD = 1–6 fins, ACC = 1–5 fins.
-         Complete Cartesian design space = 5 × 6 × 5 = 150 geometries.
-                    ↓
-STAGE 2: CADENCE SCHEMATICS & TESTBENCH SETUP
-         Configure Hold (WL=0), Read (WL=VDD, precharged BL/BLB), Write (BL pulsed low),
-         and Standby Leakage testbenches in cds_ff_mpt.
-                    ↓
-STAGE 3: AUTOMATED SPICE DESIGN-SPACE SWEEP
-         Execute 1,200 Cadence Spectre netlist sweeps (150 Cartesian geometries × 8 VDD levels).
-                    ↓
-STAGE 4: ELECTRICAL CHARACTERIZATION & FEATURE EXTRACTION
-         Extract static margins (HSNM, RSNM, WSNM), dynamic write trip points (WTP, WNM),
-         50%-to-50% switching delays, dynamic energy, and standby leakage.
-                    ↓
-STAGE 5: UNIFIED MASTER DATASET CONSOLIDATION (.CSV)
-         Structure 1,200 SPICE-characterized configurations across 60+ electrical metrics in CSV.
-                    ↓
-STAGE 6: ML SURROGATE MODELING & RIGOROUS EVALUATION
-         Train Random Forest & Gradient Boosted regressors; evaluate under both
-         Unseen-Geometry Generalization (Grouped 80/20) and Voltage Interpolation.
-                    ↓
-STAGE 7: CONSTRAINT FILTERING
-         Screen for Nominal 1.2V boundaries (RSNM >= 150 mV, Delay <= 150 ps, Leakage <= 80 nA)
-         and Multi-VDD Robustness (RSNM > 0 mV across all 8 simulated VDD levels).
-                    ↓
-STAGE 8: MULTI-OBJECTIVE PARETO DOMINANCE ANALYSIS
-         Identify non-dominated solutions across RSNM (maximize), Write Delay (minimize),
-         Hold Leakage (minimize), and Dynamic Energy (minimize).
-                    ↓
-STAGE 9: SELECTION OF 4 REPRESENTATIVE DESIGN PROFILES
-         Select Balanced Reference, Low-Power, Fast SRAM, and CR-Enhanced bitcells.
-                    ↓
-STAGE 10: INDEPENDENT CADENCE SPECTRE RE-SIMULATION & VERIFICATION
-          Re-simulate golden candidates in Spectre; 24/24 verification test cases passed
-          the < 1.0% individual-error threshold (mean absolute error < 0.3%).
-                    ↓
-STAGE 11: PUBLICATION ARTIFACTS & GITHUB PRESENTATION
-          Generate publication-grade waveform plots, design notes, and CSV data packages.
-```
+| Hyperparameter | Random Forest Regressor | Gradient Boosted Decision Trees |
+| :--- | :---: | :---: |
+| **Number of Estimators** | 100 - 120 trees | 120 - 140 stages |
+| **Maximum Tree Depth** | 12 | 5 |
+| **Learning Rate** | - | 0.08 |
+| **Feature Set** | `vdd`, `nfin_pu`, `nfin_pd`, `nfin_acc`, `cr`, `pr` | `vdd`, `nfin_pu`, `nfin_pd`, `nfin_acc`, `cr`, `pr` |
+| **Evaluation Split** | Grouped 80/20 (`GroupShuffleSplit`, random_state = 42) | Grouped 80/20 (`GroupShuffleSplit`, random_state = 42) |
+| **Held-Out Groups** | 30 full physical bitcell geometries (240 unseen test points) | 30 full physical bitcell geometries (240 unseen test points) |
 
----
-
-## 🤖 Comprehensive Multi-Parameter ML Surrogate Audit
+### Comprehensive 5-Category Surrogate Audit Table:
 
 | Parameter Category | Characterized Parameter | Unit | Range [Min, Max] | Best Model Architecture | Unseen Geometry Test (R2) | Unseen Geometry MAE | Voltage Interpolation (R2) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
@@ -158,29 +137,121 @@ STAGE 11: PUBLICATION ARTIFACTS & GITHUB PRESENTATION
 | | Average Hold Leakage Current | nA | [7.12, 118.45] | Gradient Boost | **0.8861** | 10.37 nA | 0.9908 |
 | **Dynamic Write** | Peak Write Current | uA | [18.50, 94.20] | Random Forest | **0.9945** | 1.12 uA | 0.9992 |
 | | Average Dynamic Write Energy | fJ | [0.082, 0.612] | Gradient Boost | **0.9989** | 0.005 fJ | 0.9998 |
-| | Worst Write Switching Delay | ps | [118.20, 198.50] | Gradient Boost | **0.1524** (cliff) | 9.85 ps | **0.8696** (MAE 4.53 ps) |
+| | Worst Write Switching Delay | ps | [118.20, 198.50] | Gradient Boost | **0.1524** *(cliff)* | 9.85 ps | **0.8696** (MAE 4.53 ps) |
+
+### ⚠️ ML Limitations & Physical Non-Linearity Insights:
+The surrogate models achieve near-perfect generalization for smooth read-mode and static stability metrics ($R^2 > 0.99$). However, **Write Switching Delay ($R^2 = 0.1524$)** exhibits substantially lower generalization on completely unseen geometries. 
+
+**Physical Circuit Explanation:** Write switching is governed by a sharp regenerative bistable latching threshold: as Pull-Up PMOS width increases relative to Access NMOS ($PR > 1.5$), the bitcell enters a write-ability failure cliff where switching delay jumps asymptotically to infinity. Tree-based regression models smooth out these step-function boundaries. Therefore, **machine learning is deployed for rapid global design-space screening, while Cadence Spectre SPICE serves as the mandatory sign-off verification engine.**
+
+---
+
+## 🗂️ Complete Repository Structure
+
+```text
+18nm-6t-sram-ml-optimization/
+│
+├── README.md                                 # Master project documentation
+├── LICENSE                                   # MIT License (Captain-VLSI)
+├── requirements.txt                          # Python dependencies
+├── .gitignore                                # Clean repository filter
+│
+├── 01_bitcell_design/                        # Bitcell topology & FinFET boundaries
+│   ├── 6t_sram_bitcell_schematic.png         # Transistor-level schematic
+│   └── README.md
+│
+├── 02_spice_characterization/                # Testbench setups & ADE waveforms
+│   ├── dataset_generation_scripts/           # 4 core dataset generation Python scripts
+│   │   ├── generate_snm_dataset.py           # Static SNM dataset generator
+│   │   ├── generate_standalone_sram_hold_dataset.py
+│   │   ├── generate_standalone_sram_read_dataset.py
+│   │   └── generate_standalone_sram_write_dataset.py
+│   ├── cadence_screenshots/                  # Raw Cadence Virtuoso screenshots
+│   ├── hsnm_testbench_schematic.png
+│   ├── write_hold_testbench_schematic.png
+│   └── README.md
+│
+├── 03_dataset/                               # Master dataset & raw simulation waveforms
+│   ├── DATA_DICTIONARY.md                    # Complete data schema and units
+│   ├── sram_master_unified_dataset.csv       # 1,200 SPICE characterized rows
+│   ├── scripts/
+│   │   └── merge_and_build_master_dataset.py # Master dataset consolidation pipeline
+│   ├── raw_waveforms/                        # 24 raw Cadence simulation CSVs
+│   │   ├── balanced/                         # 6 CSVs: HSNM, RSNM, WTP, Write_Hold, Read0, Read1
+│   │   ├── low_power/                        # 6 CSVs
+│   │   ├── fast_sram/                        # 6 CSVs
+│   │   └── cr_enhanced/                      # 6 CSVs
+│   └── README.md
+│
+├── 04_characterization_metrics/              # Extraction scripts & mathematical models
+│   ├── README.md                             # Mathematical formulas for SNM, WTP, Delays
+│   └── scripts/
+│       ├── evaluate_full_sram_parameters.py  # 5-category parameter extraction audit
+│       ├── generate_premium_wtp_plots.py     # Publication WTP/WNM plotting
+│       └── plot_all_cadence_validation_graphs.py # Parity dashboard & transient waves
+│
+├── 05_ml_surrogate/                          # ML models & generalization benchmarks
+│   ├── README.md
+│   └── scripts/
+│       ├── evaluate_grouped_ml_surrogate.py  # Grouped 80/20 unseen geometry benchmark
+│       └── train_sram_surrogate_models.py    # Random Forest & Gradient Boost training
+│
+├── 06_optimization/                          # Pareto dominance & constraint filtering
+│   ├── README.md
+│   ├── pareto_front.csv                      # Non-dominated optimal geometries
+│   ├── feasible_designs.csv                  # Constraint-filtered bitcell subset
+│   ├── selected_profiles.csv                 # 4 golden design profiles data
+│   └── scripts/
+│       └── generate_pareto_and_eval_ml.py    # Multi-objective Pareto generator
+│
+├── 07_verification/                          # Cadence Spectre independent verification
+│   ├── CADENCE_SPECTRE_VERIFICATION_SHEET.xlsx # Closed-loop verification workbook
+│   ├── CADENCE_GOLDEN_VERIFICATION_TEMPLATE.csv
+│   ├── full_sram_parameters_ml_audit.csv
+│   └── README.md
+│
+├── 08_results/                               # High-DPI publication figures
+│   ├── figures/                              # All 7 figures + ADE simulation graphs
+│   └── README.md
+│
+├── 09_documentation/                         # Memory compiler architecture guides
+│   ├── 01_memory_compilers_overview.md
+│   └── 02_6t_sram_bitcell_architecture_and_operation.md
+│
+└── scripts/                                  # Master runners
+    ├── generate_all_figures.py               # 1-click reproduction of all 7 figures
+    └── run_all_analysis.py                   # 1-click execution of ML audit & Pareto
+```
 
 ---
 
 ## 🚀 Quick Start & Reproducibility
 
 ```bash
-# Clone the repository
+# 1. Clone the repository
 git clone https://github.com/Captain-VLSI/18nm-6t-sram-ml-optimization.git
 cd 18nm-6t-sram-ml-optimization
 
-# Install dependencies
+# 2. Install dependencies
 pip install -r requirements.txt
 
-# Regenerate all publication figures
+# 3. Regenerate all 7 publication figures in 08_results/figures/
 python scripts/generate_all_figures.py
 
-# Execute full ML training and parameter audit
+# 4. Execute the complete ML surrogate training and parameter audit
 python scripts/run_all_analysis.py
 ```
 
 ---
 
+## 🔮 Scope, Limitations, and Future Work
+
+- **Current Scope:** Transistor-level schematic design, multi-fin sizing optimization, and SPICE characterization at nominal room temperature (27°C, TT Corner) in the Cadence Generic 18nm FinFET PDK (`cds_ff_mpt`).
+- **Physical Layout & Parasitic Extraction (PEX):** Physical layout design (DRC, LVS) and post-layout extraction (PEX) to quantify parasitic wire resistance and bitline capacitance degradation are identified as future physical-design extensions.
+- **Multi-Corner PVT & Monte Carlo Robustness:** Expanding the characterization matrix across Process corners (SS, TT, FF), Voltage variations (0.7V - 1.4V), Temperature corners (-40°C to 125°C), and Monte Carlo statistical mismatch studies are planned for subsequent silicon hardening phases.
+
+---
+
 ## 📜 License & Citation
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
-Created and maintained by **Captain-VLSI** (`ganeshs78gani@gmail.com`).
+Designed and developed by **Captain-VLSI** (`ganeshs78gani@gmail.com`).
