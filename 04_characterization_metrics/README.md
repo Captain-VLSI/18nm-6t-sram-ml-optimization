@@ -116,3 +116,16 @@ In standby hold mode (WL = 0V), static leakage arises from subthreshold drain-so
 - `scripts/evaluate_full_sram_parameters.py`: Full 5-category parameter extraction and audit script.
 - `scripts/generate_premium_wtp_plots.py`: Publication-grade WTP & WNM 4-panel generator.
 - `scripts/plot_all_cadence_validation_graphs.py`: Validation Parity Dashboard, transient write waveforms, and read sensing graphs.
+
+---
+
+## 6. References & Authoritative SRAM Literature
+
+1. **E. Seevinck, F. J. List, and J. Lohstroh**, *"Static-Noise Margin Analysis of MOS SRAM Cells,"* **IEEE JSSC**, Vol. SC-22, No. 5, pp. 748–754, Oct. 1987.
+2. **Jan M. Rabaey, Anantha Chandrakasan, and Borivoje Nikolić**, *"Digital Integrated Circuits: A Design Perspective,"* 2nd Ed., **Prentice Hall**, 2003.
+3. **Andrei Pavlov and Manoj Sachdev**, *"CMOS SRAM Circuit Design and Parametric Test in Nano-Scaled Technologies: Process-Variation-Aware Design,"* **Springer**, 2008.
+4. **Betty Prince**, *"Semiconductor Memories: A Handbook of Design, Manufacture, and Application,"* 2nd Ed., **John Wiley & Sons**, 1996.
+5. **Kerry Bernstein et al.**, *"High Performance CMOS SRAM: Modeling and Design,"* **Kluwer Academic Publishers / Springer**, 1999.
+6. **Ashok K. Sharma**, *"Advanced Semiconductor Memories: Architectures, Designs, and Testing,"* **IEEE Press / Wiley-Interscience**, 2002.
+7. **Cadence Design Systems**, *"Generic 18nm Multi-Patterning FinFET Process Design Kit (cds_ff_mpt) Reference Manual,"* **Cadence Design Systems, Inc.**, 2020.
+

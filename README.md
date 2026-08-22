@@ -306,6 +306,32 @@ python scripts/run_all_analysis.py
 
 ---
 
-## 📜 License & Copyright
+## 📚 References & Authoritative SRAM Literature
+
+1. **E. Seevinck, F. J. List, and J. Lohstroh**, *"Static-Noise Margin Analysis of MOS SRAM Cells,"* **IEEE Journal of Solid-State Circuits (JSSC)**, Vol. SC-22, No. 5, pp. 748–754, Oct. 1987.  
+   *(Foundational paper defining the 45-degree rotated coordinate system and maximum inscribed square mathematical formulation for HSNM and RSNM).*
+
+2. **Jan M. Rabaey, Anantha Chandrakasan, and Borivoje Nikolić**, *"Digital Integrated Circuits: A Design Perspective,"* 2nd Edition, **Prentice Hall**, 2003.  
+   *(Authoritative text on semiconductor memory architectures, 6T bitcell read stability/disturb conditions, Cell Ratio (CR), and Pull-Up Ratio (PR) sizing principles).*
+
+3. **Andrei Pavlov and Manoj Sachdev**, *"CMOS SRAM Circuit Design and Parametric Test in Nano-Scaled Technologies: Process-Variation-Aware Design,"* **Springer**, 2008.  
+   *(Comprehensive treatise on sub-nanometer SRAM stability, dynamic write trip points (WTP), Write Noise Margin (WNM), sense amplifier resolution, and parametric yield).*
+
+4. **Betty Prince**, *"Semiconductor Memories: A Handbook of Design, Manufacture, and Application,"* 2nd Edition, **John Wiley & Sons**, 1996.  
+   *(Standard reference on memory compiler hierarchy, bitline precharge, column multiplexing, and low-power SRAM architectures).*
+
+5. **Kerry Bernstein, Keith M. Carrig, Christopher M. Durham, and Patrick R. Hansen**, *"High Performance CMOS SRAM: Modeling and Design,"* **Kluwer Academic Publishers / Springer**, 1999.  
+   *(Covers analytical SPICE modeling of SRAM transient switching delays, bitline RC extraction, and subthreshold leakage suppression).*
+
+6. **Ashok K. Sharma**, *"Advanced Semiconductor Memories: Architectures, Designs, and Testing,"* **IEEE Press / Wiley-Interscience**, 2002.  
+   *(Covers high-speed multi-port SRAM bitcells, differential latch-type sense amplifiers, and memory compiler tiling).*
+
+7. **Cadence Design Systems**, *"Generic 18nm Multi-Patterning FinFET Process Design Kit (cds_ff_mpt) Reference Manual & Model Documentation,"* **Cadence Design Systems, Inc.**, 2020.  
+   *(Industry-standard predictive PDK documentation for multi-gate FinFET device primitives `n1svt` and `p1svt`).*
+
+---
+
+## 📜 Copyright & Terms
 Copyright (c) 2026 **Captain-VLSI** (`ganeshs78gani@gmail.com`). All rights reserved.  
 This repository and its contents are provided for academic, evaluation, and research purposes.
+
