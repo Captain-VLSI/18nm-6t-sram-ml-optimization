@@ -306,6 +306,6 @@ python scripts/run_all_analysis.py
 
 ---
 
-## 📜 License & Citation
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.  
-Designed and developed by **Captain-VLSI** (`ganeshs78gani@gmail.com`).
+## 📜 License & Copyright
+Copyright (c) 2026 **Captain-VLSI** (`ganeshs78gani@gmail.com`). All rights reserved.  
+This repository and its contents are provided for academic, evaluation, and research purposes.
