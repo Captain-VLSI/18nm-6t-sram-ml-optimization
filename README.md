@@ -8,6 +8,9 @@
 
 A comprehensive multi-objective design, machine learning surrogate modeling, and Cadence Spectre closed-loop verification framework for sub-nanosecond 6T SRAM bitcells.
 
+> **Important Technology & Methodology Note:**  
+> All bitcells, netlists, and SPICE simulations are designed and characterized using the **Cadence Generic 18nm Multi-Patterning FinFET Process Design Kit (`cds_ff_mpt`)** with `n1svt` and `p1svt` primitive devices in Cadence Virtuoso and Spectre SPICE (**not** academic predictive models like MIT PTM). All verified electrical results, metrics, and raw simulation waveforms are provided directly in open **`.csv` format**.
+
 ---
 
 ## 🏛️ 6T SRAM Bitcell Architecture (Design Under Test)
@@ -23,11 +26,11 @@ The standard 6T SRAM bitcell is composed of 6 FinFET devices categorized into 3 
 - **Internal Storage Latch (`Q` / `QB`):** Cross-coupled inverters forming the bistable storage element.
 
 ### Discrete FinFET Sizing Boundaries (Complete Cartesian Space = 150 Geometries):
-Transistor width in modern FinFET processes is quantized by discrete vertical fins ($W = N_{\text{fin}} \times [2H_{\text{fin}} + T_{\text{fin}}]$):
+Transistor width in modern FinFET processes is quantized by discrete vertical fins ($W = N_{fin} * [2H_{fin} + T_{fin}]$):
 - **Pull-Up (PU):** 1 to 5 fins (5 values)
 - **Pull-Down (PD):** 1 to 6 fins (6 values)
 - **Access (ACC):** 1 to 5 fins (5 values)
-- **Total Discrete Geometries:** $5 \times 6 \times 5 = 150$ physical bitcell configurations.
+- **Total Discrete Geometries:** 5 * 6 * 5 = **150 physical bitcell configurations**.
 
 ---
 
@@ -45,11 +48,11 @@ All electrical parameters characterized at nominal room temperature (27°C, TT C
 | **Read SNM (RSNM)** | mV | 190.22 | 145.10 | 153.49 | **204.26** *(+7.4% max stability)* |
 | **Write Static Margin (WSNM / WTP)** | mV | 432.00 | 302.00 | **503.00** *(+16.4% writeability)* | 373.00 |
 | **Write Noise Margin (WNM)** | mV | 89.40 | 68.20 | 108.50 | 74.10 |
-| **50%-50% Write Delay ($T_{\text{write}}$)** | ps | 144.53 | 149.87 | **134.58** *(sub-135 ps fast access)* | 144.24 |
+| **50%-50% Write Delay (T_write)** | ps | 144.53 | 149.87 | **134.58** *(sub-135 ps fast access)* | 144.24 |
 | **Dynamic Write Energy** | fJ | 0.312 | **0.168** *(-46.1% energy)* | 0.445 | 0.328 |
 | **Worst Read Disturb Bump** | mV | 48.20 | 34.10 | 62.40 | **38.90** *(strongest suppression)* |
-| **Standby Leakage Current ($I_{\text{leak}}$)** | nA | 47.92 | **17.56** *(-63.3% leakage)* | 58.74 | 49.31 |
-| **Static Standby Power ($P_{\text{leak}}$)** | uW | 0.057 | **0.016** *(-71.9% power)* | 0.070 | 0.059 |
+| **Standby Leakage Current (I_leak)** | nA | 47.92 | **17.56** *(-63.3% leakage)* | 58.74 | 49.31 |
+| **Static Standby Power (P_leak)** | uW | 0.057 | **0.016** *(-71.9% power)* | 0.070 | 0.059 |
 | **Verification Sign-Off** | - | **PASS (< 0.13% error)** | **PASS (< 0.19% error)** | **PASS (< 0.04% error)** | **PASS (< 0.13% error)** |
 | **Raw Simulation Waveforms** | CSV | [balanced CSVs](03_dataset/raw_waveforms/balanced/) | [low_power CSVs](03_dataset/raw_waveforms/low_power/) | [fast_sram CSVs](03_dataset/raw_waveforms/fast_sram/) | [cr_enhanced CSVs](03_dataset/raw_waveforms/cr_enhanced/) |
 
@@ -64,8 +67,6 @@ All electrical parameters characterized at nominal room temperature (27°C, TT C
 ---
 
 ## 🔒 Reproducibility Scope: What is Actually Reproducible?
-
-To ensure full technical transparency:
 
 | Component | Status | Requirements & Dependencies |
 | :--- | :---: | :--- |
@@ -87,10 +88,10 @@ All 1,200 SPICE netlist simulations were characterized under the following expli
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **Hold Mode** | Held at `0 V` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Hold SNM (HSNM) |
 | **Read Mode** | Driven to `VDD` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Read SNM (RSNM) |
-| **Write Trip Point** | Driven to `VDD` | Swept `0 V -> VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Sweep on BL, Step = 1 mV | Trip Voltage ($V_{\text{trip}}$) & WNM |
-| **Transient Write** | Pulse: $t_{\text{pulse}} = 10\text{ ns}$ ($t_r = t_f = 10\text{ ps}$) | Driven `0 V` | Held at `VDD` | `Q = VDD, QB = 0` | Transient: 0 to 100 ns, MaxStep = 1 ps | 50%-50% Delay ($T_{\text{write}}$), Energy |
-| **Transient Read** | Pulse: $t_{\text{pulse}} = 5\text{ ns}$ ($t_r = t_f = 10\text{ ps}$) | Precharged `VDD` | Precharged `VDD` | `Q = 0, QB = VDD` | Transient: 0 to 50 ns, MaxStep = 0.5 ps | Read Disturb Bump ($\Delta V_Q$), $E_{\text{read}}$ |
-| **Standby Leakage** | Held at `0 V` | Held at `VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Operating Point + Quiescent Transient | Standby Leakage ($I_{\text{leak}}$), $P_{\text{leak}}$ |
+| **Write Trip Point** | Driven to `VDD` | Swept `0 V -> VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Sweep on BL, Step = 1 mV | Trip Voltage (V_trip) & WNM |
+| **Transient Write** | Pulse: t_pulse = 10 ns (tr = tf = 10 ps) | Driven `0 V` | Held at `VDD` | `Q = VDD, QB = 0` | Transient: 0 to 100 ns, MaxStep = 1 ps | 50%-50% Delay (T_write), Energy |
+| **Transient Read** | Pulse: t_pulse = 5 ns (tr = tf = 10 ps) | Precharged `VDD` | Precharged `VDD` | `Q = 0, QB = VDD` | Transient: 0 to 50 ns, MaxStep = 0.5 ps | Read Disturb Bump (Delta V_Q), E_read |
+| **Standby Leakage** | Held at `0 V` | Held at `VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Operating Point + Quiescent Transient | Standby Leakage (I_leak), P_leak |
 
 ---
 
@@ -107,6 +108,31 @@ All 1,200 SPICE netlist simulations were characterized under the following expli
 | Dynamic Write Switching Transitions (50%-50% Delay) | Write Trip Point (WTP) & Write Noise Margin (WNM) |
 | :---: | :---: |
 | ![Write Delay Waveforms](08_results/figures/fig_validation_3_transient_write_waveforms.png) | ![WTP & WNM Dashboard](08_results/figures/fig_wtp_wnm_premium_4panel.png) |
+
+---
+
+## 📐 Circuit Physics & Mathematical Formulations
+
+### 1. Seevinck Rotated Coordinate Static Noise Margin (SNM)
+Standard butterfly curves overlay Inverter 1 VTC ($V_{QB} = f(V_Q)$) and Inverter 2 VTC ($V_Q = f(V_{QB})$). Rotating axes by 45 degrees isolates the maximum square:
+- `u = (V_Q - V_QB) / sqrt(2)`
+- `v = (V_Q + V_QB) / sqrt(2)`
+- `d(u) = (1 / sqrt(2)) * [ v_inv1(u) - v_inv2(u) ]`
+- `SNM = max_{u} [ d(u) ]`
+
+### 2. Write Trip Point (WTP) & Write Noise Margin (WNM)
+- `V_trip = V_BL | (V_Q(V_BL) = V_QB(V_BL))`
+- `WNM = max_{V_BL >= V_trip} (V_QB(V_BL)) - V_trip`
+
+### 3. 50%-to-50% Write Propagation Delay (T_write)
+- `T_write0 = t(V_Q = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
+- `T_write1 = t(V_QB = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
+- `Worst_Write_Delay = max(T_write0, T_write1)`
+
+### 4. Dynamic Energy Integration & Standby Leakage
+- `E_dynamic = integral_{t_start}^{t_end} [ VDD * I_VDD(t) ] dt`
+- `I_leak = (1 / T) * integral_{0}^{T} [ I_VDD,hold(t) ] dt`
+- `P_leak = VDD * I_leak`
 
 ---
 
@@ -215,6 +241,7 @@ The surrogate models achieve near-perfect generalization for smooth read-mode an
 │   └── README.md
 │
 ├── 09_documentation/                         # Memory compiler architecture guides
+│   ├── README.md                             # Documentation index
 │   ├── 01_memory_compilers_overview.md
 │   └── 02_6t_sram_bitcell_architecture_and_operation.md
 │

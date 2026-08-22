@@ -1,6 +1,6 @@
 # 04. Mathematical Formulations & Circuit Physics Handbook
 
-This document provides the foundational circuit physics, FinFET device equations, extraction algorithms, and machine learning mathematical formulations used across the 18nm 6T SRAM optimization framework.
+This document details the foundational circuit physics, FinFET device equations, noise margin transformations, and timing models used across the characterization framework.
 
 ---
 
@@ -26,7 +26,7 @@ A standard 6T SRAM cell stores a single binary bit using two cross-coupled inver
 ### Critical Sizing Ratios:
 - **Cell Ratio (CR - Read Stability Condition):**
   `CR = N_fin,PD / N_fin,ACC >= 1.0`  
-  Ensures the pull-down NMOS is stronger than the access NMOS, keeping the read disturb voltage `V_bump` below the inverter switching threshold ($V_{th}$) to prevent destructive read flips.
+  Ensures the pull-down NMOS is stronger than the access NMOS, keeping the read disturb voltage `V_bump` below the inverter switching threshold to prevent destructive read flips.
 
 - **Pull-Up Ratio (PR - Writeability Condition):**
   `PR = N_fin,PU / N_fin,ACC <= 1.5`  
@@ -39,18 +39,18 @@ A standard 6T SRAM cell stores a single binary bit using two cross-coupled inver
 In planar CMOS, short-channel effects (SCE) cause severe subthreshold leakage as gate length scales below 20nm. Tri-Gate FinFETs solve this by wrapping the gate around a thin 3D vertical silicon fin on three sides (top and two sidewalls).
 
 ### Effective Channel Width Quantization:
-Because the silicon fin is 3D, the conductive channel width per fin is determined by the fin height ($H_{\text{fin}}$) and fin thickness ($T_{\text{fin}}$):
+Because the silicon fin is 3D, the conductive channel width per fin is determined by the fin height ($H_{fin}$) and fin thickness ($T_{fin}$):
 `W_eff,per_fin = 2 * H_fin + T_fin`
 
 For a multi-fin transistor with `N_fin` parallel fins:
 `W_total = N_fin * (2 * H_fin + T_fin)`
-- Unlike planar CMOS where width $W$ is continuous, **FinFET width is strictly quantized to integer multiples of fins** ($N_{\text{fin}} = 1, 2, 3, \dots$).
+- Unlike planar CMOS where width $W$ is continuous, **FinFET width is strictly quantized to integer multiples of fins** ($N_{fin} = 1, 2, 3, \dots$).
 
 ### Electrostatic Advantages in 18nm:
 1. **Subthreshold Swing Suppression:**  
-   $S = (k_B T / q) * \ln(10) * (1 + C_d / C_{ox}) \approx 68\text{ mV/decade}$ (near ideal limit of 60 mV/dec at 27°C, compared to > 90 mV/dec in planar).
+   `S = (k_B * T / q) * ln(10) * (1 + C_d / C_ox) ~ 68 mV/decade` (near ideal thermodynamic limit of 60 mV/dec at 27°C, compared to > 90 mV/dec in planar).
 2. **DIBL Suppression:** Drain-Induced Barrier Lowering is heavily suppressed due to superior gate electrostatic control.
-3. **Threshold Voltage Roll-off Immunity:** Stable $V_{th}$ across nominal channel lengths ($L = 18\text{nm}$).
+3. **Threshold Voltage Roll-off Immunity:** Stable $V_{th}$ across nominal channel lengths ($L = 18	ext{nm}$).
 
 ---
 
@@ -63,7 +63,7 @@ Standard butterfly plots overlay the Voltage Transfer Curve of Inverter 1 ($V_{Q
 
 To find the maximum square that fits within the butterfly lobes, the coordinate axes are rotated by 45 degrees:
 1. **Coordinate Transformation:**
-   `u = (V_Q - V_QB) / sqrt(2)`
+   `u = (V_Q - V_QB) / sqrt(2)`  
    `v = (V_Q + V_QB) / sqrt(2)`
 
 2. **Diagonal Distance Function:**
@@ -92,12 +92,9 @@ Write noise margins are measured by sweeping the write bitline voltage from VDD 
 
 ### 1. 50%-to-50% Wordline-to-Node Switching Delay (T_write):
 The propagation delay is measured from the 50% voltage level of the rising Wordline pulse to the 50% voltage crossing of the internal node:
-- For Write-0 ($Q \to 0$):  
-  `T_write0 = t(V_Q = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
-- For Write-1 ($QB \to 0$):  
-  `T_write1 = t(V_QB = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
-- **Worst Write Delay:**  
-  `Worst_Write_Delay = max(T_write0, T_write1)`
+- For Write-0 ($Q 	o 0$): `T_write0 = t(V_Q = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
+- For Write-1 ($QB 	o 0$): `T_write1 = t(V_QB = 0.5 * VDD) - t(V_WL = 0.5 * VDD)`
+- **Worst Write Delay:** `Worst_Write_Delay = max(T_write0, T_write1)`
 
 ### 2. Dynamic Read Disturb Bump (Delta V_Q):
 During read access, capacitive and resistive bitline coupling causes a transient voltage bump on the node holding '0':
@@ -105,45 +102,17 @@ During read access, capacitive and resistive bitline coupling causes a transient
 - To maintain read non-destructiveness, `Delta V_Q < V_th,N2`.
 
 ### 3. Dynamic Energy Integration (E_write & E_read):
-The total dynamic energy dissipated per operation is obtained by numerical trapezoidal integration of the instantaneous supply current $I_{\text{VDD}}(t)$ over the active switching window:
-`E_dynamic = integral_{t_start}^{t_end} VDD * I_VDD(t) dt`
+The total dynamic energy dissipated per operation is obtained by numerical trapezoidal integration of the instantaneous supply current $I_{VDD}(t)$ over the active switching window:
+`E_dynamic = integral_{t_start}^{t_end} [ VDD * I_VDD(t) ] dt`
 
 ### 4. Standby Quiescent Leakage & Power (I_leak & P_leak):
 In standby hold mode (WL = 0V), static leakage arises from subthreshold drain-source conduction and gate-dielectric tunneling:
-- **Average Leakage Current:**  
-  `I_leak = (1 / T) * integral_{0}^{T} I_VDD,hold(t) dt`
-- **Static Standby Power:**  
-  `P_leak = VDD * I_leak`
+- **Average Leakage Current:** `I_leak = (1 / T) * integral_{0}^{T} [ I_VDD,hold(t) ] dt`
+- **Static Standby Power:** `P_leak = VDD * I_leak`
 
 ---
 
-## 5. Machine Learning Surrogate Modeling Mathematics
-
-ML surrogates replace expensive numerical SPICE differential equation solvers with fast mathematical mapping functions:  
-`y = f(x)` where `x = [VDD, N_fin,PU, N_fin,PD, N_fin,ACC, CR, PR]`.
-
-### 1. Random Forest Regressor (Bagging & Variance Reduction):
-An ensemble of $B$ deep decision trees grown on bootstrap resamples:
-`y_hat_RF = (1 / B) * sum_{b=1}^{B} T_b(x)`
-- Reduces variance without increasing bias, highly robust against input noise and local fluctuations.
-
-### 2. Gradient Boosted Decision Trees (Sequential Residual Fitting):
-Iteratively builds shallow decision trees $h_m(x)$ to minimize a mean squared error loss function:
-`f_m(x) = f_{m-1}(x) + eta * h_m(x)`
-- Where $\eta = 0.08$ is the shrinkage learning rate.
-- Excels at fitting smooth, continuous non-linear physical functions (e.g. read access energy, static power).
-
-### 3. Model Performance Metrics:
-- **Mean Absolute Error (MAE):**
-  `MAE = (1 / N) * sum_{i=1}^{N} | y_i - y_hat_i |`
-- **Root Mean Squared Error (RMSE):**
-  `RMSE = sqrt( (1 / N) * sum_{i=1}^{N} (y_i - y_hat_i)^2 )`
-- **Coefficient of Determination (R2 Score):**
-  `R2 = 1 - [ sum_{i=1}^{N} (y_i - y_hat_i)^2 / sum_{i=1}^{N} (y_i - y_mean)^2 ]`
-  - $R^2 = 1.0$ indicates perfect prediction.
-
-### 4. Grouped Unseen-Geometry Generalization Protocol:
-Rather than standard random row splitting (which leaks voltage-interpolated points of the same bitcell), samples are split using `GroupShuffleSplit`:
-- **Grouping Variable:** `geom_id = (PU, PD, ACC)`
-- **80% Training Geometries:** 120 bitcell geometries across all 8 voltages (960 samples).
-- **20% Held-Out Test Geometries:** 30 complete physical bitcell geometries never seen during training (240 test samples).
+## 5. Scripts in this Module
+- `scripts/evaluate_full_sram_parameters.py`: Full 5-category parameter extraction and audit script.
+- `scripts/generate_premium_wtp_plots.py`: Publication-grade WTP & WNM 4-panel generator.
+- `scripts/plot_all_cadence_validation_graphs.py`: Validation Parity Dashboard, transient write waveforms, and read sensing graphs.

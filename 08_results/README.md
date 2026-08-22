@@ -1,10 +1,10 @@
-# 08. Results & Publication Figures
+# 08. Results & Publication Figure Gallery
 
-This directory contains the high-DPI publication figures, multi-objective Pareto-front projections, and Cadence Virtuoso verification waveforms.
+This directory contains high-DPI publication figures, multi-objective Pareto-front projections, and raw Cadence Virtuoso ADE verification waveforms.
 
 ---
 
-## Verification Dashboard & Pareto Frontiers
+## 📊 Verification Dashboard & Pareto Frontiers
 
 | Verification Parity Dashboard | Multi-Objective Pareto-Front Tradeoffs |
 | :---: | :---: |
@@ -12,7 +12,7 @@ This directory contains the high-DPI publication figures, multi-objective Pareto
 
 ---
 
-## Static Noise Margin (SNM) Butterfly Curves & DC Transfer
+## 🦋 Static Noise Margin (SNM) Butterfly Curves & DC Transfer
 
 | Unified SNM Butterfly Curves (Inscribed Squares) | Cadence ADE DC Butterfly Waveforms |
 | :---: | :---: |
@@ -20,7 +20,7 @@ This directory contains the high-DPI publication figures, multi-objective Pareto
 
 ---
 
-## Write Trip Point (WTP) & Write Noise Margin (WNM)
+## ⚡ Write Trip Point (WTP) & Write Noise Margin (WNM)
 
 | 4-Profile WTP & WNM Dashboard | Single-Cell Focus (Balanced Reference) |
 | :---: | :---: |
@@ -28,7 +28,7 @@ This directory contains the high-DPI publication figures, multi-objective Pareto
 
 ---
 
-## Dynamic Transient Waveforms (Write Delay & Read Disturb)
+## ⏱️ Dynamic Transient Waveforms (Write Delay & Read Disturb)
 
 | Python Publication Write Switching Transitions | Cadence ADE Multi-Cycle Write & Hold Transient Response |
 | :---: | :---: |
