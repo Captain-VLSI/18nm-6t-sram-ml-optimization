@@ -9,9 +9,9 @@ This directory documents the Cadence Virtuoso testbench environments, simulation
 - **Wordline:** Held at `WL = 0V` (Access transistors OFF).
 - **Sweep:** Internal storage node voltage swept from `0V` to `VDD` (1 mV resolution) to extract back-to-back Inverter Voltage Transfer Curves (VTCs).
 
-| HSNM Testbench Schematic | Cadence ADE DC Butterfly Waveform |
-| :---: | :---: |
-| ![HSNM Testbench Schematic](hsnm_testbench_schematic.png) | ![HSNM Waveform](hsnm_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="hsnm_cadence_waveform_graph.png" alt="Cadence ADE DC Butterfly Waveform" width="750"/>
+</p>
 
 ---
 
@@ -19,11 +19,11 @@ This directory documents the Cadence Virtuoso testbench environments, simulation
 - **Simulation Type:** Transient Dynamic Response (0 to 100 ns, maxstep = 1 ps)
 - **Wordline (WL):** Pulsed HIGH (`0V -> VDD`, tr = tf = 10 ps) for write cycles, held LOW (`0V`) for hold retention.
 - **Bitlines (BL / BLB):** Driven differentially (`BL = 0V, BLB = VDD` for Write-0; `BL = VDD, BLB = 0V` for Write-1).
-- **Measurement:** 50%-to-50% switching propagation delay ($T_{write}$) and dynamic energy integration.
+- **Measurement:** 50%-to-50% switching propagation delay (T_write) and dynamic energy integration.
 
-| Write & Hold Testbench Schematic | Cadence ADE Transient Response Waveforms |
-| :---: | :---: |
-| ![Write Hold Testbench](write_hold_testbench_schematic.png) | ![Write Hold Waveform](write_hold_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="write_hold_cadence_waveform_graph.png" alt="Cadence ADE Transient Response Waveforms" width="750"/>
+</p>
 
 ---
 

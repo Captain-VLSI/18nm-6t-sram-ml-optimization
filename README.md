@@ -101,17 +101,17 @@ All 1,200 SPICE netlist simulations were characterized under the following expli
 - **Simulation Type:** DC Voltage Sweep (0V to VDD, 1 mV step) with `WL = 0V`.
 - **Purpose:** Characterizes cross-coupled inverter voltage transfer curves (VTCs) to calculate hold-mode static noise immunity.
 
-| HSNM Testbench Schematic (`cds_ff_mpt`) | Cadence ADE DC Butterfly Waveform |
-| :---: | :---: |
-| ![HSNM Testbench Schematic](02_spice_characterization/hsnm_testbench_schematic.png) | ![HSNM Waveform](02_spice_characterization/hsnm_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="02_spice_characterization/hsnm_cadence_waveform_graph.png" alt="Cadence ADE DC Butterfly Waveform" width="750"/>
+</p>
 
 ### 2. Transient Write & Hold Multi-Cycle Characterization
 - **Simulation Type:** Transient Dynamic Response (0 to 100 ns, maxstep = 1 ps).
-- **Purpose:** Measures 50%-50% write switching delay ($T_{write}$), dynamic write energy, and standby data retention.
+- **Purpose:** Measures 50%-50% write switching delay (T_write), dynamic write energy, and standby data retention.
 
-| Write & Hold Testbench Schematic (`cds_ff_mpt`) | Cadence ADE Transient Multi-Cycle Response |
-| :---: | :---: |
-| ![Write Hold Testbench](02_spice_characterization/write_hold_testbench_schematic.png) | ![Write Hold Waveform](02_spice_characterization/write_hold_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="02_spice_characterization/write_hold_cadence_waveform_graph.png" alt="Cadence ADE Transient Multi-Cycle Response" width="750"/>
+</p>
 
 ### 3. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
 - 📄 [`generate_snm_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_snm_dataset.py): Automates DC butterfly sweeps and calculates Hold, Read, and Write SNMs.
@@ -220,8 +220,8 @@ The surrogate models achieve near-perfect generalization for smooth read-mode an
 │   │   ├── generate_standalone_sram_read_dataset.py
 │   │   └── generate_standalone_sram_write_dataset.py
 │   ├── cadence_screenshots/                  # Raw Cadence Virtuoso screenshots
-│   ├── hsnm_testbench_schematic.png
-│   ├── write_hold_testbench_schematic.png
+│   ├── hsnm_cadence_waveform_graph.png
+│   ├── write_hold_cadence_waveform_graph.png
 │   └── README.md
 │
 ├── 03_dataset/                               # Master dataset & raw simulation waveforms
