@@ -97,32 +97,81 @@ All 1,200 SPICE netlist simulations were characterized under the following expli
 
 ## 🏛️ Cadence Virtuoso SPICE Testbenches & Simulation Waveforms
 
-All 1,200 SPICE netlist simulations were characterized in Cadence Virtuoso ADE using the Generic 18nm FinFET PDK (`cds_ff_mpt`). Below are representative Cadence ADE simulation waveforms:
+All 1,200 SPICE netlist simulations were characterized in Cadence Virtuoso ADE using the Generic 18nm FinFET PDK (`cds_ff_mpt`). Below are the authentic Cadence Virtuoso ADE simulation waveforms representing the static stability and dynamic transient operations:
 
-### 1. DC Static Margins (HSNM, RSNM & Write Trip Point)
-| Hold SNM (HSNM) DC Butterfly | Read SNM (RSNM) DC Butterfly | Write Trip Point (WTP) DC Sweep |
-| :---: | :---: | :---: |
-| ![HSNM Waveform](02_spice_characterization/cadence_hsnm_dc_butterfly_0.9v.png) | ![RSNM Waveform](02_spice_characterization/cadence_rsnm_dc_butterfly_0.9v.png) | ![WTP Waveform](02_spice_characterization/cadence_wtp_wsnm_dc_sweep_0.9v.png) |
+### 1. Hold Static Noise Margin (HSNM) DC Butterfly Waveform
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) on internal storage nodes with `WL = 0V` (Access transistors OFF).
+- **Circuit Behavior:** Overlays the back-to-back Inverter Voltage Transfer Curves (`q vs qb` and `qb vs q`). The side length of the maximum inscribed square inside the butterfly eyes quantifies the static noise immunity in standby hold mode (`HSNM = 281.54 mV @ 0.9V`).
 
-### 2. Dynamic Transient Responses (Read Disturb & Multi-Cycle Write)
-| Read-1 Dynamic Response (QB Disturb) | Read-0 Dynamic Response (Q Disturb) | Multi-Cycle Write Switching (0 to 100ns) |
-| :---: | :---: | :---: |
-| ![Read-1 Dynamic Response](02_spice_characterization/cadence_read1_transient_disturb_0.9v.png) | ![Read-0 Dynamic Response](02_spice_characterization/cadence_read0_transient_disturb_0.9v.png) | ![Write Multi-Cycle Response](02_spice_characterization/cadence_write_multicycle_transient_0.9v.png) |
+<p align="center">
+  <img src="02_spice_characterization/cadence_hsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Hold SNM DC Butterfly Waveform" width="850"/>
+</p>
 
-### 3. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
+---
+
+### 2. Read Static Noise Margin (RSNM) DC Butterfly Waveform
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) with `WL = VDD` and bitlines precharged to `VDD`.
+- **Circuit Behavior:** Access transistors conduct, creating a resistive voltage divider between the pull-down NMOS and access NMOS. This elevates the low-node voltage and narrows the butterfly opening. The non-zero inscribed square verifies non-destructive read stability without state flipping (`RSNM = 145.10 mV @ 0.9V`).
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_rsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Read SNM DC Butterfly Waveform" width="850"/>
+</p>
+
+---
+
+### 3. Write Trip Point (WTP) & Write Static Margin (WSNM) DC Sweep
+- **Simulation Type:** DC Voltage Sweep on Bitline-Bar (`VBLB: 0V -> VDD`, 1 mV step) with `WL = VDD` and initial state `Q = 0, QB = VDD`.
+- **Circuit Behavior:** As `VBLB` decreases, the access transistor pulls node `QB` low. At `V_trip = 302.0 mV` (for the 0.9V profile), regenerative inverter feedback triggers and flips the storage nodes (`Q -> 0.9V, QB -> 0V`), defining the writeability margin.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_wtp_wsnm_dc_sweep_0.9v.png" alt="Cadence ADE Write Trip Point DC Sweep Waveform" width="850"/>
+</p>
+
+---
+
+### 4. Dynamic Read-1 Transient Response & QB Disturb Bump
+- **Simulation Type:** Time-domain transient simulation (0 to 100 ns) with periodic wordline pulses (20 ns period) and bitlines precharged to `0.9V` holding data '1' (`Q = 0.9V, QB = 0V`).
+- **Circuit Behavior:** When `WL` pulses HIGH, charge flows from precharged `BLB` through access transistor `AX2` into node `QB`, creating a small transient disturb bump (~125 mV). The bump remains safely below the inverter threshold, confirming stable, non-destructive read access.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_read1_transient_disturb_0.9v.png" alt="Cadence ADE Read-1 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### 5. Dynamic Read-0 Transient Response & Q Disturb Bump
+- **Simulation Type:** Complementary time-domain read transient simulation (0 to 100 ns) holding data '0' (`Q = 0V, QB = 0.9V`).
+- **Circuit Behavior:** Upon `WL` assertion, bitline charge sharing produces a bounded voltage bump on node `Q` (~125 mV). Symmetrical disturb suppression across both nodes confirms robust cell ratio (CR) sizing under 18nm FinFET quantization.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_read0_transient_disturb_0.9v.png" alt="Cadence ADE Read-0 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### 6. Dynamic Multi-Cycle Write Switching Response
+- **Simulation Type:** Time-domain multi-cycle transient simulation (0 to 100 ns) applying alternating Write-0 (`BL = 0V, BLB = 0.9V`) and Write-1 (`BL = 0.9V, BLB = 0V`) pulses with synchronous 10 ns `WL` strobes.
+- **Circuit Behavior:** Demonstrates rapid, rail-to-rail dynamic flipping of internal nodes `Q` and `QB` within < 150 ps of wordline activation, verifying robust write switching and clean state retention during hold cycles.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_write_multicycle_transient_0.9v.png" alt="Cadence ADE Multi-Cycle Write Transient Response" width="850"/>
+</p>
+
+---
+
+### 7. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
 - 📄 [`generate_snm_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_snm_dataset.py): Automates DC butterfly sweeps and calculates Hold, Read, and Write SNMs.
 - 📄 [`generate_standalone_sram_hold_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_hold_dataset.py): Automates standby leakage current (I_leak) and static power (P_leak) characterization.
 - 📄 [`generate_standalone_sram_read_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_read_dataset.py): Automates dynamic Read-0/Read-1 sensing and disturb bump measurements.
 - 📄 [`generate_standalone_sram_write_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_write_dataset.py): Automates transient Write-0/Write-1 switching delays and dynamic write energies.
 
-
 ---
 
 ## 🦋 Static Noise Margin (SNM) Butterfly Characterization
 
-| Seevinck Rotated Butterfly Curves (Inscribed Squares) | Cadence Virtuoso ADE DC Transfer Waves |
-| :---: | :---: |
-| ![SNM Butterfly Curves](08_results/figures/fig_snm_butterflies_perfect_unified.png) | ![Cadence DC Butterfly](08_results/figures/hsnm_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="08_results/figures/fig_snm_butterflies_perfect_unified.png" alt="Seevinck Rotated Butterfly Curves (Inscribed Squares)" width="850"/>
+</p>
 
 ---
 

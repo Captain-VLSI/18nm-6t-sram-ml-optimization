@@ -7,49 +7,63 @@ This directory documents the Cadence Virtuoso ADE testbench environments, DC swe
 ## 1. DC Static Margins Characterization
 
 ### A. Hold Static Noise Margin (HSNM)
-- **Simulation Type:** DC Voltage Sweep (0V to VDD, 1 mV step) with `WL = 0V`.
-- **Measurement:** Back-to-back Inverter Voltage Transfer Curves (VTCs) extracting the maximum square in the hold state.
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) on internal storage nodes with `WL = 0V` (Access transistors OFF).
+- **Circuit Behavior:** Overlays the back-to-back Inverter Voltage Transfer Curves (`q vs qb` and `qb vs q`). The side length of the maximum inscribed square inside the butterfly eyes quantifies the static noise immunity in standby hold mode (`HSNM = 281.54 mV @ 0.9V`).
 
 <p align="center">
-  <img src="cadence_hsnm_dc_butterfly_0.9v.png" alt="Cadence ADE HSNM DC Butterfly Waveform" width="750"/>
+  <img src="cadence_hsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Hold SNM DC Butterfly Waveform" width="850"/>
 </p>
+
+---
 
 ### B. Read Static Noise Margin (RSNM)
-- **Simulation Type:** DC Voltage Sweep (0V to VDD, 1 mV step) with `WL = VDD`, `BL = BLB = VDD`.
-- **Measurement:** Inverter VTCs under active wordline disturbance to determine read stability and prevent destructive state flipping.
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) with `WL = VDD` and bitlines precharged to `VDD`.
+- **Circuit Behavior:** Access transistors conduct, creating a resistive voltage divider between the pull-down NMOS and access NMOS. This elevates the low-node voltage and narrows the butterfly opening. The non-zero inscribed square verifies non-destructive read stability without state flipping (`RSNM = 145.10 mV @ 0.9V`).
 
 <p align="center">
-  <img src="cadence_rsnm_dc_butterfly_0.9v.png" alt="Cadence ADE RSNM DC Butterfly Waveform" width="750"/>
+  <img src="cadence_rsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Read SNM DC Butterfly Waveform" width="850"/>
 </p>
 
+---
+
 ### C. Write Trip Point (WTP) & Write Static Margin (WSNM)
-- **Simulation Type:** DC Voltage Sweep on bitline (`VBLB: 0V -> VDD`, 1 mV step) with `WL = VDD`, initial state `Q = 0, QB = VDD`.
-- **Measurement:** Bitline voltage level at which the internal storage latch transitions state (Trip Point = 302.0 mV @ 0.9V).
+- **Simulation Type:** DC Voltage Sweep on Bitline-Bar (`VBLB: 0V -> VDD`, 1 mV step) with `WL = VDD` and initial state `Q = 0, QB = VDD`.
+- **Circuit Behavior:** As `VBLB` decreases, the access transistor pulls node `QB` low. At `V_trip = 302.0 mV` (for the 0.9V profile), regenerative inverter feedback triggers and flips the storage nodes (`Q -> 0.9V, QB -> 0V`), defining the writeability margin.
 
 <p align="center">
-  <img src="cadence_wtp_wsnm_dc_sweep_0.9v.png" alt="Cadence ADE Write Trip Point DC Sweep Waveform" width="750"/>
+  <img src="cadence_wtp_wsnm_dc_sweep_0.9v.png" alt="Cadence ADE Write Trip Point DC Sweep Waveform" width="850"/>
 </p>
 
 ---
 
 ## 2. Dynamic Transient Response Characterization
 
-### A. Dynamic Read Sensing & Read Disturb Bump (Dual-Polarity)
-- **Simulation Type:** Transient Dynamic Response (0 to 100 ns, maxstep = 0.5 ps) with `WL` pulse train and precharged bitlines (`BL = BLB = VDD`).
-- **Read-1 Operation (`Q = VDD, QB = 0`):** Access transistor transfers bitline charge, producing a bounded voltage disturb bump on `QB` without destructive latch flipping.
-- **Read-0 Operation (`Q = 0, QB = VDD`):** Verifies complementary read stability with bounded disturb bump on `Q`.
-
-| Read-1 Dynamic Response (QB Disturb Bump) | Read-0 Dynamic Response (Q Disturb Bump) |
-| :---: | :---: |
-| ![Read-1 Dynamic Response](cadence_read1_transient_disturb_0.9v.png) | ![Read-0 Dynamic Response](cadence_read0_transient_disturb_0.9v.png) |
-
-### B. Dynamic Multi-Cycle Write Switching Response
-- **Simulation Type:** Transient Multi-Cycle Response (0 to 100 ns, maxstep = 1 ps).
-- **Stimulus:** `WL` pulsed HIGH (10 ns width, 20 ns period), `BL` and `BLB` driven differentially with alternating Write-0 and Write-1 data.
-- **Measurement:** 50%-to-50% write switching propagation delay (T_write) and dynamic switching energy integration.
+### A. Dynamic Read-1 Transient Response & QB Disturb Bump
+- **Simulation Type:** Time-domain transient simulation (0 to 100 ns) with periodic wordline pulses (20 ns period) and bitlines precharged to `0.9V` holding data '1' (`Q = 0.9V, QB = 0V`).
+- **Circuit Behavior:** When `WL` pulses HIGH, charge flows from precharged `BLB` through access transistor `AX2` into node `QB`, creating a small transient disturb bump (~125 mV). The bump remains safely below the inverter threshold, confirming stable, non-destructive read access.
 
 <p align="center">
-  <img src="cadence_write_multicycle_transient_0.9v.png" alt="Cadence ADE Transient Multi-Cycle Write Response" width="750"/>
+  <img src="cadence_read1_transient_disturb_0.9v.png" alt="Cadence ADE Read-1 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### B. Dynamic Read-0 Transient Response & Q Disturb Bump
+- **Simulation Type:** Complementary time-domain read transient simulation (0 to 100 ns) holding data '0' (`Q = 0V, QB = 0.9V`).
+- **Circuit Behavior:** Upon `WL` assertion, bitline charge sharing produces a bounded voltage bump on node `Q` (~125 mV). Symmetrical disturb suppression across both nodes confirms robust cell ratio (CR) sizing under 18nm FinFET quantization.
+
+<p align="center">
+  <img src="cadence_read0_transient_disturb_0.9v.png" alt="Cadence ADE Read-0 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### C. Dynamic Multi-Cycle Write Switching Response
+- **Simulation Type:** Time-domain multi-cycle transient simulation (0 to 100 ns) applying alternating Write-0 (`BL = 0V, BLB = 0.9V`) and Write-1 (`BL = 0.9V, BLB = 0V`) pulses with synchronous 10 ns `WL` strobes.
+- **Circuit Behavior:** Demonstrates rapid, rail-to-rail dynamic flipping of internal nodes `Q` and `QB` within < 150 ps of wordline activation, verifying robust write switching and clean state retention during hold cycles.
+
+<p align="center">
+  <img src="cadence_write_multicycle_transient_0.9v.png" alt="Cadence ADE Multi-Cycle Write Transient Response" width="850"/>
 </p>
 
 ---

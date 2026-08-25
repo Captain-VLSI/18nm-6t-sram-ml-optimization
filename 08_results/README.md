@@ -14,9 +14,9 @@ This directory contains high-DPI publication figures, multi-objective Pareto-fro
 
 ## 🦋 Static Noise Margin (SNM) Butterfly Curves & DC Transfer
 
-| Unified SNM Butterfly Curves (Inscribed Squares) | Cadence ADE DC Butterfly Waveforms |
-| :---: | :---: |
-| ![Unified SNM Curves](figures/fig_snm_butterflies_perfect_unified.png) | ![Cadence DC Waveforms](figures/hsnm_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="figures/fig_snm_butterflies_perfect_unified.png" alt="Unified SNM Butterfly Curves (Inscribed Squares)" width="850"/>
+</p>
 
 ---
 
@@ -30,6 +30,6 @@ This directory contains high-DPI publication figures, multi-objective Pareto-fro
 
 ## ⏱️ Dynamic Transient Waveforms (Write Delay & Read Disturb)
 
-| Python Publication Write Switching Transitions | Cadence ADE Multi-Cycle Write & Hold Transient Response |
-| :---: | :---: |
-| ![Write Delay](figures/fig_validation_3_transient_write_waveforms.png) | ![Write Hold Cadence Response](figures/write_hold_cadence_waveform_graph.png) |
+<p align="center">
+  <img src="figures/fig_validation_3_transient_write_waveforms.png" alt="Python Publication Write Switching Transitions" width="850"/>
+</p>
