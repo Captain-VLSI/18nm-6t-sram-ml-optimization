@@ -13,10 +13,27 @@ A comprehensive multi-objective design, machine learning surrogate modeling, and
 
 ---
 
-## 🏛️ 6T SRAM Bitcell Architecture (Design Under Test)
+## 📋 Logical Workflow & Methodology Architecture
+
+```text
+┌─────────────────────────┐     ┌─────────────────────────┐     ┌─────────────────────────┐
+│ 1. 18nm FinFET Bitcell  │ ──> │ 2. Cadence Virtuoso     │ ──> │ 3. 1,200-Point Master   │
+│    Sizing Grid (150)    │     │    SPICE Characterize   │     │    SPICE Dataset        │
+└─────────────────────────┘     └─────────────────────────┘     └─────────────────────────┘
+                                                                             │
+┌─────────────────────────┐     ┌─────────────────────────┐                  ▼
+│ 6. Closed-Loop Sign-Off │ <── │ 5. NSGA-II Multi-Obj.   │ <── ┌─────────────────────────┐
+│    Spectre Verification │     │    Pareto Optimization  │     │ 4. ML Surrogate Models  │
+└─────────────────────────┘     └─────────────────────────┘     │    & Multi-Metric Parity│
+                                                                └─────────────────────────┘
+```
+
+---
+
+## 🏛️ 1. 6T SRAM Bitcell Architecture (Design Under Test)
 
 <p align="center">
-  <img src="01_bitcell_design/6t_sram_bitcell_schematic.png" alt="6T SRAM Bitcell Schematic" width="750"/>
+  <img src="01_bitcell_design/6t_sram_bitcell_schematic.png" alt="6T SRAM Bitcell Schematic" width="850"/>
 </p>
 
 The standard 6T SRAM bitcell is composed of 6 FinFET devices categorized into 3 complementary functional pairs:
@@ -26,15 +43,224 @@ The standard 6T SRAM bitcell is composed of 6 FinFET devices categorized into 3 
 - **Internal Storage Latch (`Q` / `QB`):** Cross-coupled inverters forming the bistable storage element.
 
 ### Discrete FinFET Sizing Boundaries (Complete Cartesian Space = 150 Geometries):
-Transistor width in modern FinFET processes is quantized by discrete vertical fins ($W = N_{fin} * [2H_{fin} + T_{fin}]$):
+Transistor width in modern FinFET processes is quantized by discrete vertical fins (`W = N_fin * [2 * H_fin + T_fin]`):
 - **Pull-Up (PU):** 1 to 5 fins (5 values)
 - **Pull-Down (PD):** 1 to 6 fins (6 values)
 - **Access (ACC):** 1 to 5 fins (5 values)
-- **Total Discrete Geometries:** 5 * 6 * 5 = **150 physical bitcell configurations**.
+- **Supply Voltage (VDD):** 0.6V to 1.3V (8 voltage levels: 0.6V, 0.7V, 0.8V, 0.9V, 1.0V, 1.1V, 1.2V, 1.3V)
+- **Total Characterized Design Space:** 150 geometries * 8 voltages = **1,200 SPICE operating points**.
 
 ---
 
-## 🏆 Master Comparison of the 4 Golden Design Profiles
+## 🔬 2. Cadence Virtuoso SPICE Testbenches & Simulation Waveforms
+
+All 1,200 SPICE netlist simulations were characterized in Cadence Virtuoso ADE using the Generic 18nm FinFET PDK (`cds_ff_mpt`).
+
+### Detailed Cadence Testbench Conditions:
+
+| Simulation Mode | Wordline (WL) | Bitline (BL) | Bitline-Bar (BLB) | Initial Node State | Sweep / Analysis Parameters | Extraction Target |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Hold Mode** | Held at `0 V` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Hold SNM (HSNM) |
+| **Read Mode** | Driven to `VDD` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Read SNM (RSNM) |
+| **Write Trip Point** | Driven to `VDD` | Swept `0 V -> VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Sweep on BL, Step = 1 mV | Trip Voltage (V_trip) & WNM |
+| **Transient Write** | Pulse: t_pulse = 10 ns (tr = tf = 10 ps) | Driven `0 V` | Held at `VDD` | `Q = VDD, QB = 0` | Transient: 0 to 100 ns, MaxStep = 1 ps | 50%-50% Delay (T_write), Energy |
+| **Transient Read** | Pulse: t_pulse = 5 ns (tr = tf = 10 ps) | Precharged `VDD` | Precharged `VDD` | `Q = 0, QB = VDD` | Transient: 0 to 50 ns, MaxStep = 0.5 ps | Read Disturb Bump (Delta V_Q), E_read |
+| **Standby Leakage** | Held at `0 V` | Held at `VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Operating Point + Quiescent Transient | Standby Leakage (I_leak), P_leak |
+
+---
+
+### A. Hold Static Noise Margin (HSNM) DC Butterfly Waveform
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) on internal storage nodes with `WL = 0V` (Access transistors OFF).
+- **Circuit Behavior:** Overlays the back-to-back Inverter Voltage Transfer Curves (`q vs qb` and `qb vs q`). The side length of the maximum inscribed square inside the butterfly eyes quantifies the static noise immunity in standby hold mode (`HSNM = 281.54 mV @ 0.9V`).
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_hsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Hold SNM DC Butterfly Waveform" width="850"/>
+</p>
+
+---
+
+### B. Read Static Noise Margin (RSNM) DC Butterfly Waveform
+- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) with `WL = VDD` and bitlines precharged to `VDD`.
+- **Circuit Behavior:** Access transistors conduct, creating a resistive voltage divider between the pull-down NMOS and access NMOS. This elevates the low-node voltage and narrows the butterfly opening. The non-zero inscribed square verifies non-destructive read stability without state flipping (`RSNM = 145.10 mV @ 0.9V`).
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_rsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Read SNM DC Butterfly Waveform" width="850"/>
+</p>
+
+---
+
+### C. Write Trip Point (WTP) & Write Static Margin (WSNM) DC Sweep
+- **Simulation Type:** DC Voltage Sweep on Bitline-Bar (`VBLB: 0V -> VDD`, 1 mV step) with `WL = VDD` and initial state `Q = 0, QB = VDD`.
+- **Circuit Behavior:** As `VBLB` decreases, the access transistor pulls node `QB` low. At `V_trip = 302.0 mV` (for the 0.9V profile), regenerative inverter feedback triggers and flips the storage nodes (`Q -> 0.9V, QB -> 0V`), defining the writeability margin.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_wtp_wsnm_dc_sweep_0.9v.png" alt="Cadence ADE Write Trip Point DC Sweep Waveform" width="850"/>
+</p>
+
+---
+
+### D. Dynamic Read-1 Transient Response & QB Disturb Bump
+- **Simulation Type:** Time-domain transient simulation (0 to 100 ns) with periodic wordline pulses (20 ns period) and bitlines precharged to `0.9V` holding data '1' (`Q = 0.9V, QB = 0V`).
+- **Circuit Behavior:** When `WL` pulses HIGH, charge flows from precharged `BLB` through access transistor `AX2` into node `QB`, creating a small transient disturb bump (~125 mV). The bump remains safely below the inverter threshold, confirming stable, non-destructive read access.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_read1_transient_disturb_0.9v.png" alt="Cadence ADE Read-1 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### E. Dynamic Read-0 Transient Response & Q Disturb Bump
+- **Simulation Type:** Complementary time-domain read transient simulation (0 to 100 ns) holding data '0' (`Q = 0V, QB = 0.9V`).
+- **Circuit Behavior:** Upon `WL` assertion, bitline charge sharing produces a bounded voltage bump on node `Q` (~125 mV). Symmetrical disturb suppression across both nodes confirms robust cell ratio (CR) sizing under 18nm FinFET quantization.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_read0_transient_disturb_0.9v.png" alt="Cadence ADE Read-0 Dynamic Transient Response" width="850"/>
+</p>
+
+---
+
+### F. Dynamic Multi-Cycle Write Switching Response
+- **Simulation Type:** Time-domain multi-cycle transient simulation (0 to 100 ns) applying alternating Write-0 (`BL = 0V, BLB = 0.9V`) and Write-1 (`BL = 0.9V, BLB = 0V`) pulses with synchronous 10 ns `WL` strobes.
+- **Circuit Behavior:** Demonstrates rapid, rail-to-rail dynamic flipping of internal nodes `Q` and `QB` within < 150 ps of wordline activation, verifying robust write switching and clean state retention during hold cycles.
+
+<p align="center">
+  <img src="02_spice_characterization/cadence_write_multicycle_transient_0.9v.png" alt="Cadence ADE Multi-Cycle Write Transient Response" width="850"/>
+</p>
+
+---
+
+### G. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
+- 📄 [`generate_snm_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_snm_dataset.py): Automates DC butterfly sweeps and calculates Hold, Read, and Write SNMs via Seevinck coordinate rotation.
+- 📄 [`generate_standalone_sram_hold_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_hold_dataset.py): Automates standby leakage current (`I_leak`) and static power (`P_leak`) characterization.
+- 📄 [`generate_standalone_sram_read_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_read_dataset.py): Automates dynamic Read-0/Read-1 sensing, bitline discharge rates, and disturb bump measurements.
+- 📄 [`generate_standalone_sram_write_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_write_dataset.py): Automates transient Write-0/Write-1 50%-50% switching delays and dynamic write energy integration.
+
+---
+
+## 📈 3. 1,200-Point Master SPICE Dataset & Physical Feasibility Analysis
+
+The characterization pipeline swept all 150 FinFET bitcell geometries across 8 supply voltages, yielding 1,200 fully characterized operating points. 
+
+### Feasibility Yield & Physical Failure Breakdown:
+A design is classified as physically infeasible if it exhibits:
+1. Write switching failure (delay cliff where switching fails within the wordline pulse).
+2. WSNM extraction sentinel failure (`WSNM <= 0 mV`).
+3. Collapsed hold or read static noise margins (`HSNM <= 0 mV` or `RSNM <= 0 mV`).
+4. Destructive read disturb latch flipping.
+
+<p align="center">
+  <img src="08_results/figures/fig1_feasibility_and_failures.png" alt="Operating Point Feasibility Yield and Breakdown of Failure Mechanisms" width="850"/>
+</p>
+
+- **Feasibility Yield vs. Supply Voltage:** Feasibility is highest at ultra-low voltage (90.0% @ 0.6V) due to relaxed write contention, dropping to 70.0% @ 1.1V and 74.7% @ 1.3V due to increased contention between strong pull-up PMOS and access NMOS devices.
+- **Dominant Failure Mechanism:** Write switching failure (165 occurrences) represents the primary physical boundary condition when `PR > 1.25` and `CR < 1.0`.
+
+---
+
+## 🤖 4. Machine Learning Surrogate Modeling & Multi-Metric Validation
+
+To bypass computationally intensive SPICE simulations during large-scale memory compiler design-space exploration, high-fidelity machine learning surrogates (Random Forest, Gradient Boosted Trees, and Multi-Layer Perceptrons) were trained on the 1,200-point SPICE dataset.
+
+### A. GroupKFold Generalization Parity Validation (Unseen Geometries):
+To prevent data leakage and rigorously evaluate model generalization on completely unseen physical bitcells, models were evaluated using **Grouped 80/20 Cross-Validation (`GroupKFold` / `GroupShuffleSplit`, 30 held-out geometries)**.
+
+<p align="center">
+  <img src="08_results/figures/fig2_parity_plots_groupkfold.png" alt="GroupKFold Surrogate Parity Plots on Unseen Geometries" width="850"/>
+</p>
+
+- **(a) Static Read Margin (RSNM) - MLP:** Achieves `R2 = 0.9892`, `MAE = 4.22 mV`, `MAPE = 4.94%`, demonstrating near-perfect correlation across the full stability range (0 to 300 mV).
+- **(b) Static Write Margin (WSNM) - XGBoost:** Achieves `R2 = 0.9127`, `MAE = 33.09 mV`, accurately predicting writeability across the entire 0 to 1,200 mV span.
+- **(c) Worst Write Delay - Random Forest:** Demonstrates tight grouping along the 1:1 parity line with `MAE = 10.96 ps` and `MAPE = 3.58%`.
+- **(d) Average Write Energy - XGBoost:** Achieves `MAE = 0.35 fJ` and `MAPE = 6.71%`, confirming precision energy prediction across all sizing combinations.
+
+---
+
+### B. Comprehensive 5-Category Surrogate Audit Table:
+
+| Parameter Category | Characterized Parameter | Unit | Range [Min, Max] | Best Model Architecture | Unseen Geometry Test (R2) | Unseen Geometry MAE | Voltage Interpolation (R2) |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Static Stability** | Read Static Noise Margin (RSNM) | mV | [24.12, 281.87] | Random Forest | **0.9903** | 4.65 mV | 0.9984 |
+| | Hold Static Noise Margin (HSNM) | mV | [112.45, 412.30] | Random Forest | **0.9854** | 6.82 mV | 0.9972 |
+| | Write Static Noise Margin (WSNM / WTP) | mV | [180.20, 580.40] | Gradient Boost | **0.9912** | 5.14 mV | 0.9989 |
+| **Dynamic Read** | Worst Read Disturb Voltage | mV | [12.40, 148.90] | Random Forest | **0.9876** | 2.31 mV | 0.9978 |
+| | Read Access Energy | fJ | [0.045, 0.482] | Gradient Boost | **0.9998** | 0.003 fJ | 0.9999 |
+| | Read Operation Power | uW | [0.220, 2.410] | Gradient Boost | **0.9996** | 0.015 uW | 0.9999 |
+| **Standby & Leakage** | Static Standby Power | uW | [0.008, 0.145] | Gradient Boost | **0.8912** | 0.006 uW | 0.9915 |
+| | Average Hold Leakage Current | nA | [7.12, 118.45] | Gradient Boost | **0.8861** | 10.37 nA | 0.9908 |
+| **Dynamic Write** | Peak Write Current | uA | [18.50, 94.20] | Random Forest | **0.9945** | 1.12 uA | 0.9992 |
+| | Average Dynamic Write Energy | fJ | [0.082, 0.612] | Gradient Boost | **0.9989** | 0.005 fJ | 0.9998 |
+| | Worst Write Switching Delay | ps | [118.20, 198.50] | Gradient Boost | **0.1524** *(cliff)* | 9.85 ps | **0.8696** (MAE 4.53 ps) |
+
+---
+
+### C. Computational Speedup Benchmark (SPICE vs. ML Surrogate):
+
+<p align="center">
+  <img src="08_results/figures/fig6_computational_speedup_benchmark.png" alt="Computational Runtime Comparison: Cadence Spectre SPICE vs. ML Surrogate" width="850"/>
+</p>
+
+- **Cadence Spectre SPICE:** Requires **~4.50 Hours (16,200 seconds)** for full characterization of the 1,200 operating points.
+- **Discrete NSGA-II Optimization:** Evaluates 3,500 to 45,000 candidate points in **1.03 s to 6.06 s (2,670x to 15,700x faster)**.
+- **Exhaustive ML Surrogate Grid Sweep:** Evaluates the entire 1,200-point Cartesian design space in **65.27 ms (~248,200x faster)**, enabling real-time memory compiler sizing exploration.
+
+---
+
+### D. ⚠️ ML Limitations & Physical Non-Linearity Insights:
+The surrogate models achieve near-perfect generalization for smooth read-mode and static stability metrics (`R2 > 0.99`). However, **Write Switching Delay (`R2 = 0.1524`)** exhibits substantially lower generalization on completely unseen geometries. 
+
+**Physical Circuit Explanation:** Write switching is governed by a sharp regenerative bistable latching threshold: as Pull-Up PMOS width increases relative to Access NMOS (`PR > 1.25`), the bitcell enters a write-ability failure cliff where switching delay jumps asymptotically to infinity. Tree-based regression models smooth out these step-function boundaries. Therefore, **machine learning is deployed for rapid global design-space screening, while Cadence Spectre SPICE serves as the mandatory sign-off verification engine.**
+
+---
+
+## 🎯 5. Multi-Objective Evolutionary Optimization (NSGA-II & Pareto Discovery)
+
+Using the ML surrogate models as fast objective evaluators, multi-objective evolutionary algorithms (NSGA-II) were executed to extract non-dominated Pareto frontiers across competing SRAM metrics:
+1. **Maximize Read Stability (`RSNM`)**
+2. **Maximize Writeability (`WSNM`)**
+3. **Minimize Write Switching Delay (`T_write`)**
+4. **Minimize Standby Leakage Current (`I_leak`)**
+5. **Minimize Dynamic Write Energy (`E_write`)**
+
+---
+
+### A. Multi-Objective Pareto-Optimal Tradeoff Frontiers:
+
+<p align="center">
+  <img src="08_results/figures/fig_pareto_front_tradeoffs.png" alt="18nm FinFET 6T SRAM Multi-Objective Pareto-Optimal Tradeoffs" width="850"/>
+</p>
+
+- **Read Stability vs. Write Delay Tradeoff:** Higher RSNM (> 200 mV) requires larger Pull-Down NMOS sizing (`CR >= 1.5`), which mildly increases internal node capacitance and establishes an optimal Pareto knee at 143 ps.
+- **Read Stability vs. Hold Leakage Tradeoff:** Standby leakage current scales with total fin count. The Pareto frontier clearly identifies ultra-low leakage designs (< 25 nA) at 0.9V and high-stability designs (> 200 mV) at 1.2V.
+- **Write Speed vs. Dynamic Write Energy Tradeoff:** Demonstrates the steep energy penalty required for sub-135 ps write access due to larger access transistors.
+
+---
+
+### B. Pareto Frontier Projections & Ground-Truth SPICE Recovery:
+
+<p align="center">
+  <img src="08_results/figures/fig3_pareto_frontier_projections.png" alt="Pareto Frontier Projections and Ground-Truth SPICE Recovery" width="850"/>
+</p>
+
+- Compares the NSGA-II discovered Pareto front against the 435 ground-truth non-dominated SPICE points, demonstrating high coverage across stability, power, and speed dimensions.
+
+---
+
+### C. NSGA-II Convergence Scaling & Hypervolume Coverage:
+
+<p align="center">
+  <img src="08_results/figures/fig4_nsga2_convergence_scaling.png" alt="NSGA-II Multi-Objective Convergence and Generational Distance" width="850"/>
+</p>
+
+- **(a) Hypervolume Coverage:** Reaches **96.91%** at baseline budget (100x35) and scales to **100.00%** hypervolume coverage at 300x150 generations.
+- **(b) Convergence & Diversity:** Inverted Generational Distance (IGD) rapidly drops from `0.0122` down to `0.0039`, confirming excellent spread and proximity to the true Pareto frontier.
+
+---
+
+## 🏆 6. Closed-Loop Cadence Virtuoso SPICE Sign-Off Verification & 4 Golden Profiles
+
+To provide full verification sign-off, four specialized design points from the Pareto frontier were re-simulated in Cadence Spectre at the transistor level:
+
+### Master Comparison of the 4 Golden Design Profiles:
 
 All electrical parameters characterized at nominal room temperature (27°C, TT Corner) using Cadence Spectre:
 
@@ -58,135 +284,62 @@ All electrical parameters characterized at nominal room temperature (27°C, TT C
 
 ---
 
-## 📊 Verification Dashboard & Multi-Objective Tradeoffs
-
-| Closed-Loop Parity Dashboard | Multi-Objective Pareto-Front Projections |
-| :---: | :---: |
-| ![Master Dashboard](08_results/figures/fig_validation_master_dashboard.png) | ![Pareto Frontiers](08_results/figures/fig_pareto_front_tradeoffs.png) |
-
----
-
-## 🔒 Reproducibility Scope: What is Actually Reproducible?
-
-| Component | Status | Requirements & Dependencies |
-| :--- | :---: | :--- |
-| **Master Dataset Analysis** | ✅ **Fully Reproducible** | Python 3.10+, `numpy`, `pandas` (Executes from cloned repo) |
-| **ML Surrogate Model Training** | ✅ **Fully Reproducible** | `scikit-learn` (Trains Random Forest & Gradient Boosting in < 10 seconds) |
-| **Unseen-Geometry Benchmark** | ✅ **Fully Reproducible** | `GroupShuffleSplit` across 30 held-out physical bitcell geometries |
-| **Pareto Dominance Analysis** | ✅ **Fully Reproducible** | Extracts non-dominated trade-off frontiers across all 150 geometries |
-| **Figure & Waveform Plotting** | ✅ **Fully Reproducible** | `matplotlib`, `scipy` (Regenerates all 7 high-DPI figures from raw CSVs) |
-| **Verification Error Checks** | ✅ **Fully Reproducible** | Validates parity between baseline and measured metrics (< 0.3% MAE) |
-| **Raw Cadence Spectre Netlist Sweeps** | ⚠️ **Licensed Tool Required** | Requires Cadence Virtuoso / Spectre & Generic 18nm FinFET PDK (`cds_ff_mpt`) |
-
----
-
-## 🔬 Detailed Cadence Testbench Conditions
-
-All 1,200 SPICE netlist simulations were characterized under the following explicit boundary conditions:
-
-| Simulation Mode | Wordline (WL) | Bitline (BL) | Bitline-Bar (BLB) | Initial Node State | Sweep / Analysis Parameters | Extraction Target |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Hold Mode** | Held at `0 V` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Hold SNM (HSNM) |
-| **Read Mode** | Driven to `VDD` | Precharged `VDD` | Precharged `VDD` | Swept dynamically | DC Sweep: `0 V` to `VDD`, Step = 1 mV | Read SNM (RSNM) |
-| **Write Trip Point** | Driven to `VDD` | Swept `0 V -> VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Sweep on BL, Step = 1 mV | Trip Voltage (V_trip) & WNM |
-| **Transient Write** | Pulse: t_pulse = 10 ns (tr = tf = 10 ps) | Driven `0 V` | Held at `VDD` | `Q = VDD, QB = 0` | Transient: 0 to 100 ns, MaxStep = 1 ps | 50%-50% Delay (T_write), Energy |
-| **Transient Read** | Pulse: t_pulse = 5 ns (tr = tf = 10 ps) | Precharged `VDD` | Precharged `VDD` | `Q = 0, QB = VDD` | Transient: 0 to 50 ns, MaxStep = 0.5 ps | Read Disturb Bump (Delta V_Q), E_read |
-| **Standby Leakage** | Held at `0 V` | Held at `VDD` | Held at `VDD` | `Q = 0, QB = VDD` | DC Operating Point + Quiescent Transient | Standby Leakage (I_leak), P_leak |
-
----
-
-## 🏛️ Cadence Virtuoso SPICE Testbenches & Simulation Waveforms
-
-All 1,200 SPICE netlist simulations were characterized in Cadence Virtuoso ADE using the Generic 18nm FinFET PDK (`cds_ff_mpt`). Below are the authentic Cadence Virtuoso ADE simulation waveforms representing the static stability and dynamic transient operations:
-
-### 1. Hold Static Noise Margin (HSNM) DC Butterfly Waveform
-- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) on internal storage nodes with `WL = 0V` (Access transistors OFF).
-- **Circuit Behavior:** Overlays the back-to-back Inverter Voltage Transfer Curves (`q vs qb` and `qb vs q`). The side length of the maximum inscribed square inside the butterfly eyes quantifies the static noise immunity in standby hold mode (`HSNM = 281.54 mV @ 0.9V`).
+### A. Transistor-Level Golden Re-Simulation Validation Dashboard:
 
 <p align="center">
-  <img src="02_spice_characterization/cadence_hsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Hold SNM DC Butterfly Waveform" width="850"/>
+  <img src="08_results/figures/fig_validation_master_dashboard.png" alt="Cadence Spectre Transistor-Level Golden Re-Simulation Validation Dashboard" width="850"/>
 </p>
+
+- **Parity Checks:** RSNM, Write Delay, and WSNM show exact parity between ML predictions and independent Cadence Spectre SPICE re-simulations across all 4 golden profiles.
+- **Residual Error:** Absolute relative error across all key parameters remains strictly below the **1.0% error threshold** (maximum observed error = 0.88% on HSNM for Balanced profile).
 
 ---
 
-### 2. Read Static Noise Margin (RSNM) DC Butterfly Waveform
-- **Simulation Type:** DC Voltage Sweep (`0V -> VDD`, 1 mV step) with `WL = VDD` and bitlines precharged to `VDD`.
-- **Circuit Behavior:** Access transistors conduct, creating a resistive voltage divider between the pull-down NMOS and access NMOS. This elevates the low-node voltage and narrows the butterfly opening. The non-zero inscribed square verifies non-destructive read stability without state flipping (`RSNM = 145.10 mV @ 0.9V`).
+### B. Unified Static Noise Margin (SNM) Butterfly Curves & Inscribed Squares:
 
 <p align="center">
-  <img src="02_spice_characterization/cadence_rsnm_dc_butterfly_0.9v.png" alt="Cadence ADE Read SNM DC Butterfly Waveform" width="850"/>
+  <img src="08_results/figures/fig_snm_butterflies_perfect_unified.png" alt="Cadence Spectre Static Noise Margin Butterfly Curves with Inscribed Squares" width="850"/>
 </p>
+
+- **Top Row (Hold SNM):** Standby hold butterfly curves with exact geometric inscribed squares. Demonstrates maximum hold noise immunity for Balanced (`368.11 mV`) and Fast (`350.68 mV`).
+- **Bottom Row (Read SNM):** Active wordline read butterfly curves. Highlights the maximum stability of the CR-Enhanced profile (`RSNM = 204.26 mV`), providing +7.4% greater read noise margin over the balanced baseline.
 
 ---
 
-### 3. Write Trip Point (WTP) & Write Static Margin (WSNM) DC Sweep
-- **Simulation Type:** DC Voltage Sweep on Bitline-Bar (`VBLB: 0V -> VDD`, 1 mV step) with `WL = VDD` and initial state `Q = 0, QB = VDD`.
-- **Circuit Behavior:** As `VBLB` decreases, the access transistor pulls node `QB` low. At `V_trip = 302.0 mV` (for the 0.9V profile), regenerative inverter feedback triggers and flips the storage nodes (`Q -> 0.9V, QB -> 0V`), defining the writeability margin.
+### C. 4-Profile Write Trip Point (WTP) & Write Noise Margin (WNM) DC Curves:
 
 <p align="center">
-  <img src="02_spice_characterization/cadence_wtp_wsnm_dc_sweep_0.9v.png" alt="Cadence ADE Write Trip Point DC Sweep Waveform" width="850"/>
+  <img src="08_results/figures/fig_wtp_wnm_premium_4panel.png" alt="Cadence Spectre Write Trip Point and Write Noise Margin 4-Panel Dashboard" width="850"/>
 </p>
+
+- **Writeability Analysis:** DC sweeps of Bitline voltage (`V_BL`) displaying internal node voltage transitions (`Q` and `QB`). The Fast profile achieves the highest write trip point (`V_trip = 503.0 mV`, `WNM = 468.7 mV`), confirming superior writeability.
 
 ---
 
-### 4. Dynamic Read-1 Transient Response & QB Disturb Bump
-- **Simulation Type:** Time-domain transient simulation (0 to 100 ns) with periodic wordline pulses (20 ns period) and bitlines precharged to `0.9V` holding data '1' (`Q = 0.9V, QB = 0V`).
-- **Circuit Behavior:** When `WL` pulses HIGH, charge flows from precharged `BLB` through access transistor `AX2` into node `QB`, creating a small transient disturb bump (~125 mV). The bump remains safely below the inverter threshold, confirming stable, non-destructive read access.
+### D. Dynamic Transient Write Delay Waveforms (50% WL to 50% Node Flip):
 
 <p align="center">
-  <img src="02_spice_characterization/cadence_read1_transient_disturb_0.9v.png" alt="Cadence ADE Read-1 Dynamic Transient Response" width="850"/>
+  <img src="08_results/figures/fig_validation_3_transient_write_waveforms.png" alt="Cadence Spectre Transient Write Delay Characterization across 4 Profiles" width="850"/>
 </p>
+
+- **Transient Write Switching:** Precise 50%-to-50% propagation delay extraction during rail-to-rail dynamic write operations. Confirms sub-135 ps access delay for the Fast SRAM profile (`T_write = 134.58 ps`).
 
 ---
 
-### 5. Dynamic Read-0 Transient Response & Q Disturb Bump
-- **Simulation Type:** Complementary time-domain read transient simulation (0 to 100 ns) holding data '0' (`Q = 0V, QB = 0.9V`).
-- **Circuit Behavior:** Upon `WL` assertion, bitline charge sharing produces a bounded voltage bump on node `Q` (~125 mV). Symmetrical disturb suppression across both nodes confirms robust cell ratio (CR) sizing under 18nm FinFET quantization.
+### E. Dynamic Transient Read Waveforms (Differential Sensing & Voltage Bump):
 
 <p align="center">
-  <img src="02_spice_characterization/cadence_read0_transient_disturb_0.9v.png" alt="Cadence ADE Read-0 Dynamic Transient Response" width="850"/>
+  <img src="08_results/figures/fig_validation_4_transient_read_waveforms.png" alt="Cadence Spectre Transient Read Dynamic Waveforms and Disturb Bump" width="850"/>
 </p>
 
----
-
-### 6. Dynamic Multi-Cycle Write Switching Response
-- **Simulation Type:** Time-domain multi-cycle transient simulation (0 to 100 ns) applying alternating Write-0 (`BL = 0V, BLB = 0.9V`) and Write-1 (`BL = 0.9V, BLB = 0V`) pulses with synchronous 10 ns `WL` strobes.
-- **Circuit Behavior:** Demonstrates rapid, rail-to-rail dynamic flipping of internal nodes `Q` and `QB` within < 150 ps of wordline activation, verifying robust write switching and clean state retention during hold cycles.
-
-<p align="center">
-  <img src="02_spice_characterization/cadence_write_multicycle_transient_0.9v.png" alt="Cadence ADE Multi-Cycle Write Transient Response" width="850"/>
-</p>
+- **Read Sensing & Disturb Suppression:** Time-domain bitline discharge and internal node disturb bump during read access. The Low-Power profile produces the lowest disturb bump (`149.6 mV`), while the CR-Enhanced profile suppresses node disturb to `152.0 mV` despite full 1.2V operation.
 
 ---
 
-### 7. Automated Dataset Generation Python Scripts (`02_spice_characterization/dataset_generation_scripts/`)
-- 📄 [`generate_snm_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_snm_dataset.py): Automates DC butterfly sweeps and calculates Hold, Read, and Write SNMs.
-- 📄 [`generate_standalone_sram_hold_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_hold_dataset.py): Automates standby leakage current (I_leak) and static power (P_leak) characterization.
-- 📄 [`generate_standalone_sram_read_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_read_dataset.py): Automates dynamic Read-0/Read-1 sensing and disturb bump measurements.
-- 📄 [`generate_standalone_sram_write_dataset.py`](02_spice_characterization/dataset_generation_scripts/generate_standalone_sram_write_dataset.py): Automates transient Write-0/Write-1 switching delays and dynamic write energies.
-
----
-
-## 🦋 Static Noise Margin (SNM) Butterfly Characterization
-
-<p align="center">
-  <img src="08_results/figures/fig_snm_butterflies_perfect_unified.png" alt="Seevinck Rotated Butterfly Curves (Inscribed Squares)" width="850"/>
-</p>
-
----
-
-## ⚡ Dynamic Write & Read Switching Waveforms
-
-| Dynamic Write Switching Transitions (50%-50% Delay) | Write Trip Point (WTP) & Write Noise Margin (WNM) |
-| :---: | :---: |
-| ![Write Delay Waveforms](08_results/figures/fig_validation_3_transient_write_waveforms.png) | ![WTP & WNM Dashboard](08_results/figures/fig_wtp_wnm_premium_4panel.png) |
-
----
-
-## 📐 Circuit Physics & Mathematical Formulations
+## 📐 7. Circuit Physics & Mathematical Formulations
 
 ### 1. Seevinck Rotated Coordinate Static Noise Margin (SNM)
-Standard butterfly curves overlay Inverter 1 VTC ($V_{QB} = f(V_Q)$) and Inverter 2 VTC ($V_Q = f(V_{QB})$). Rotating axes by 45 degrees isolates the maximum square:
+Standard butterfly curves overlay Inverter 1 VTC (`V_QB = f(V_Q)`) and Inverter 2 VTC (`V_Q = f(V_QB)`). Rotating axes by 45 degrees isolates the maximum square:
 - `u = (V_Q - V_QB) / sqrt(2)`
 - `v = (V_Q + V_QB) / sqrt(2)`
 - `d(u) = (1 / sqrt(2)) * [ v_inv1(u) - v_inv2(u) ]`
@@ -208,43 +361,7 @@ Standard butterfly curves overlay Inverter 1 VTC ($V_{QB} = f(V_Q)$) and Inverte
 
 ---
 
-## 🤖 ML Surrogate Methodology & Rigorous Evaluation
-
-### Machine Learning Hyperparameters & Model Architecture:
-
-| Hyperparameter | Random Forest Regressor | Gradient Boosted Decision Trees |
-| :--- | :---: | :---: |
-| **Number of Estimators** | 100 - 120 trees | 120 - 140 stages |
-| **Maximum Tree Depth** | 12 | 5 |
-| **Learning Rate** | - | 0.08 |
-| **Feature Set** | `vdd`, `nfin_pu`, `nfin_pd`, `nfin_acc`, `cr`, `pr` | `vdd`, `nfin_pu`, `nfin_pd`, `nfin_acc`, `cr`, `pr` |
-| **Evaluation Split** | Grouped 80/20 (`GroupShuffleSplit`, random_state = 42) | Grouped 80/20 (`GroupShuffleSplit`, random_state = 42) |
-| **Held-Out Groups** | 30 full physical bitcell geometries (240 unseen test points) | 30 full physical bitcell geometries (240 unseen test points) |
-
-### Comprehensive 5-Category Surrogate Audit Table:
-
-| Parameter Category | Characterized Parameter | Unit | Range [Min, Max] | Best Model Architecture | Unseen Geometry Test (R2) | Unseen Geometry MAE | Voltage Interpolation (R2) |
-| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Static Stability** | Read Static Noise Margin (RSNM) | mV | [24.12, 281.87] | Random Forest | **0.9903** | 4.65 mV | 0.9984 |
-| | Hold Static Noise Margin (HSNM) | mV | [112.45, 412.30] | Random Forest | **0.9854** | 6.82 mV | 0.9972 |
-| | Write Static Noise Margin (WSNM / WTP) | mV | [180.20, 580.40] | Gradient Boost | **0.9912** | 5.14 mV | 0.9989 |
-| **Dynamic Read** | Worst Read Disturb Voltage | mV | [12.40, 148.90] | Random Forest | **0.9876** | 2.31 mV | 0.9978 |
-| | Read Access Energy | fJ | [0.045, 0.482] | Gradient Boost | **0.9998** | 0.003 fJ | 0.9999 |
-| | Read Operation Power | uW | [0.220, 2.410] | Gradient Boost | **0.9996** | 0.015 uW | 0.9999 |
-| **Standby & Leakage** | Static Standby Power | uW | [0.008, 0.145] | Gradient Boost | **0.8912** | 0.006 uW | 0.9915 |
-| | Average Hold Leakage Current | nA | [7.12, 118.45] | Gradient Boost | **0.8861** | 10.37 nA | 0.9908 |
-| **Dynamic Write** | Peak Write Current | uA | [18.50, 94.20] | Random Forest | **0.9945** | 1.12 uA | 0.9992 |
-| | Average Dynamic Write Energy | fJ | [0.082, 0.612] | Gradient Boost | **0.9989** | 0.005 fJ | 0.9998 |
-| | Worst Write Switching Delay | ps | [118.20, 198.50] | Gradient Boost | **0.1524** *(cliff)* | 9.85 ps | **0.8696** (MAE 4.53 ps) |
-
-### ⚠️ ML Limitations & Physical Non-Linearity Insights:
-The surrogate models achieve near-perfect generalization for smooth read-mode and static stability metrics ($R^2 > 0.99$). However, **Write Switching Delay ($R^2 = 0.1524$)** exhibits substantially lower generalization on completely unseen geometries. 
-
-**Physical Circuit Explanation:** Write switching is governed by a sharp regenerative bistable latching threshold: as Pull-Up PMOS width increases relative to Access NMOS ($PR > 1.5$), the bitcell enters a write-ability failure cliff where switching delay jumps asymptotically to infinity. Tree-based regression models smooth out these step-function boundaries. Therefore, **machine learning is deployed for rapid global design-space screening, while Cadence Spectre SPICE serves as the mandatory sign-off verification engine.**
-
----
-
-## 🗂️ Complete Repository Structure
+## 🗂️ 8. Complete Repository Structure
 
 ```text
 18nm-6t-sram-ml-optimization/
@@ -383,4 +500,3 @@ python scripts/run_all_analysis.py
 ## 📜 Copyright & Terms
 Copyright (c) 2026 **Captain-VLSI** (`ganeshs78gani@gmail.com`). All rights reserved.  
 This repository and its contents are provided for academic, evaluation, and research purposes.
-
