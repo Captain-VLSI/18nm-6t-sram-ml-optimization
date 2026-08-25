@@ -1,0 +1,3 @@
+*.scs linguist-language=SPICE
+*.scs linguist-detectable=true
+*.py linguist-language=Python
