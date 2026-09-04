@@ -132,22 +132,107 @@ A read operation non-destructively senses the stored state by generating a small
 
 ### Step 1: Bitline Precharge
 Before reading, the precharge circuit pulls both bitlines to the supply voltage:
-- `BL = VDD` (e.g., 0.90 V)
-- `BLB = VDD` (e.g., 0.90 V)
+- `BL = VDD`
+- `BLB = VDD`
 
 ### Step 2: Wordline Assertion
-- `WL = 1` (AX1 and AX2 turn ON).
+- `WL = 1 (VDD)` (Access transistors AX1 and AX2 turn ON).
 
-### Step 3: Differential Discharge
-Assume the stored bit is `Q = 0 (GND)` and `QB = 1 (VDD)`:
-- Since node `Q` is at 0V and `BL` is at VDD, a discharge current path is established:
-  `BL -> AX1 -> Q -> N1 -> GND`
-- Bitline `BL` discharges downward slightly (e.g., from 0.90 V down to 0.84 V).
-- Bitline `BLB` remains at VDD because node `QB` is at VDD (no voltage delta across AX2).
+### Step 3: Circuit Physics of Read Disturb (Why Node Q Rises)
+Assume the cell stores a logic '0' at node Q (`Q = 0V`) and '1' at node QB (`QB = VDD`).
 
-### Step 4: Sense Amplification
-- A small differential voltage (typically Delta_V = 50 mV to 100 mV) develops between BL and BLB.
-- The Sense Amplifier is triggered by the `SAEN` clock, amplifying this small differential into a full rail-to-rail digital logic output ('0').
+When WL is asserted:
+- **Gate terminal:** `WL = VDD` -> Transistor turns ON.
+- **Drain/Source terminal 1:** Connected to precharged bitline `BL = VDD`.
+- **Drain/Source terminal 2:** Connected to internal node `Q = initially 0V`.
+
+Therefore:
+```text
+V_GS,AX = VDD - 0 = VDD
+```
+So the access NMOS strongly conducts.
+
+Because BL is at a higher potential (VDD) than Q (0V), conventional current flows from the precharged bitline into internal node Q:
+```text
+BL -> AX1 -> Q
+```
+This current charges the internal parasitic node capacitance at Q ($C_Q$), causing the voltage at node Q to rise:
+```text
+Q: 0V -> some positive voltage (Read Disturb Bump)
+```
+
+#### Is the Access Transistor in Saturation?
+**Initially, yes.**
+
+For NMOS saturation:
+```text
+V_DS >= V_GS - V_T
+```
+At the exact moment of wordline activation ($t = 0^+$):
+- `V_BL = VDD`
+- `V_Q ~ 0V`
+
+Therefore:
+```text
+V_DS,AX = VDD - 0 = VDD
+V_GS,AX = VDD - 0 = VDD
+```
+The saturation condition is:
+```text
+VDD >= VDD - V_T  (which is always TRUE)
+```
+So initially, the access transistor AX operates in the **saturation region**.
+
+#### What Happens as Node Q Rises?
+As AX supplies current to charge node Q, voltage $V_Q$ increases ($Q \uparrow$):
+- `V_DS,AX = VDD - V_Q`
+- `V_GS,AX = VDD - V_Q` (with the source defined at the lower-potential Q node)
+
+As $V_Q$ rises, $V_{DS,AX}$ and $V_{GS,AX}$ both decrease, and the operating region of AX can transition toward the linear/triode region.
+
+**Key Insight:** AX does not raise Q simply because it is in saturation; it raises Q because it is ON and provides a low-resistance conductive path from the precharged bitline (VDD) to node Q, injecting charge into the Q-node capacitance.
+
+### Step 4: The Voltage Divider & Fighting Transistors
+This is the core stability mechanism in 6T SRAM bitcells:
+
+As node Q rises ($Q \uparrow$), the Pull-Down NMOS (N1) connected between Q and GND also sees its gate voltage (held at $QB = VDD$) and drain voltage ($V_Q$) conducting current:
+```text
+BL -> AX1 -> Q -> N1 -> GND
+```
+Two transistors are actively fighting over node Q:
+1. **Access NMOS (AX1):** Pulls current from precharged BL (VDD), trying to raise $V_Q$.
+2. **Pull-Down NMOS (N1):** Sinks current to GND, trying to keep $V_Q$ at 0V.
+
+The peak disturb voltage reached at node Q represents a resistive voltage divider between AX1 and N1:
+```text
+V_Q,bump ~ VDD * [ R_N1 / (R_N1 + R_AX1) ]
+```
+
+To prevent a **destructive read flip**, the voltage bump at node Q must remain safely below the switching threshold ($V_{th,N2}$) of the opposite inverter:
+```text
+V_Q,bump < V_th,N2
+```
+This is why the **Cell Ratio (CR = W_PD / W_AX = Nfin,PD / Nfin,ACC >= 1.0)** is strictly enforced: the Pull-Down NMOS must be wider/stronger than the Access NMOS so that $R_{N1} \ll R_{AX1}$, keeping $V_Q$ clamped near ground.
+
+### Step 5: Sense Amplification
+- Current continuing through `BL -> AX1 -> N1 -> GND` discharges the bitline capacitance ($C_{BL}$), pulling BL down slightly below VDD.
+- Meanwhile, bitline BLB remains fully at VDD because node QB is at VDD (no voltage difference across AX2).
+- A small differential voltage ($\Delta V_{BL} = 50\text{ mV to } 100\text{ mV}$) develops between BL and BLB.
+- The Sense Amplifier is triggered by `SAEN`, amplifying this differential delta into a full rail-to-rail logic '0' output without waiting for full bitline discharge.
+
+---
+
+## 🎯 Interview-Quality Question & Answer (ARM Memory Design)
+
+**Question:** *"Why does the access transistor increase node Q during a read operation, and what determines bitcell stability?"*
+
+**Answer:**
+> "During a read operation, both bitlines are precharged to VDD while node Q stores a logic 0 (0V). When the wordline is asserted to VDD, the access NMOS turns on with V_GS = VDD and creates a low-impedance conductive path between BL and Q. The resulting potential difference drives current from BL toward Q, charging the parasitic capacitance at node Q and causing its voltage to rise—this is the dynamic read disturb bump. 
+> 
+> Initially, because V_DS = VDD and V_GS = VDD, the access transistor operates in saturation (V_DS >= V_GS - V_T), though its operating point shifts as Q rises. Simultaneously, the pull-down NMOS conducts to sink this current to ground. The bitcell essentially forms a resistive voltage divider between the access transistor and the pull-down transistor (BL -> AX -> Q -> PD -> GND). 
+> 
+> To ensure non-destructive read stability, the cell ratio (CR = W_PD / W_AX) is sized greater than 1.0, ensuring the pull-down device is sufficiently stronger than the access device to clamp the peak Q disturb voltage well below the switching threshold of the opposing cross-coupled inverter."
+
 
 ---
 
